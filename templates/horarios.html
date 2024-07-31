@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Horarios</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="d-flex container mt-5 justify-content-between align-items-center">
+        <h1 class="font-weight-bold mb-4">Trabajadores</h1>
+        <a href="/admin" class="btn btn-secondary text-white px-3">Volver</a>
+    </div>
+    <div class="container">
+        <div class="form-group">
+            <label for="yearSelect">Selecciona el año:</label>
+            <select id="yearSelect" class="form-control" onchange="filterByYear()">
+                {{range .Years}}
+                <option value="{{.}}" {{if eq . $.Year}}selected{{end}}>{{.}}</option>    
+                {{end}}            
+            </select>
+        </div>
+        <div class="row">
+            {{range .Weeks}}
+            <div class="col-md-6 mb-2">
+                <a href="/admin/horarios/{{.WeekID}}" class="btn btn-outline-secondary btn-block">
+                    Semana {{.Week}}: {{.Start}} - {{.End}}
+                </a>
+            </div>
+            {{end}}
+        </div>
+    </div>
+    <script>
+        function filterByYear() {
+            var year = document.getElementById("yearSelect").value;
+            window.location.href = "/admin/horarios?year=" + year;
+        }
+    </script>
+</body>
+</html>

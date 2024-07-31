@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard del Administrador</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .fixed-width {
+            width: 10%; /* 100% / 8 columnas = 12.5% */
+        }
+        .custom-container {
+            max-width: 1300px;
+        }
+        a {
+            text-decoration: none; /* Elimina subrayado de los enlaces */
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="d-flex container-xxl mx-5 my-5 justify-content-between align-items-center">
+        <h1 class="font-weight-bold mb-4">Trabajadores</h1>
+        <a href="/admin" class="btn btn-secondary text-white px-3">Volver</a>
+    </div>
+    <div class="container-xxl mx-5 my-5">
+        <!-- Botones para ordenar y filtrar -->
+        <div class="d-flex justify-content-between mb-3">
+            <div>
+                <button class="btn btn-secondary" onclick="sortTableByStore()">Ordenar por Tienda</button>
+                <input type="text" class="form-control d-inline-block w-auto ml-3" id="filterNameInput" placeholder="Filtrar por Nombre" onkeyup="filterTableByName()">
+                <select class="form-control d-inline-block w-auto ml-3" id="filterStoreSelect" onchange="filterTableByStore()">
+                    <option value="">Filtrar por Tienda</option>
+                    {{range .Stores}}
+                    <option value="{{.}}">{{.}}</option>
+                    {{end}}
+                </select>
+            </div>
+            <div>
+                <button class="btn btn-success" onclick="downloadExcel()">Descargar Excel</button>
+                <button class="btn btn-primary ml-2" type="button" data-toggle="modal" data-target="#addWorkerModal">
+                    Añadir Trabajador
+                </button>
+            </div>
+        </div>
+
+        <!-- Tabla de Trabajadores -->
+        <table class="table table-striped" id="workersTable">
+            <thead>
+                <tr>
+                    <th class="fixed-width text-center">Nombre</th>
+                    <th class="fixed-width text-center">Apellido</th>
+                    <th class="fixed-width text-center">Email</th>
+                    <th class="fixed-width text-center">Identificación</th>
+                    <th class="fixed-width text-center">Cargo</th>
+                    <th class="fixed-width text-center">Tienda</th>
+                    <th class="fixed-width text-center">Estado</th>
+                    <th class="fixed-width text-center">Período de Prueba</th>
+                    <th class="fixed-width text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{range .Workers}}
+                <tr>
+                    <td class="fixed-width text-center"><a href="/admin/workers/{{.ID}}">{{.Name}}</a></td>
+                    <td class="fixed-width text-center">{{.Lastname}}</td>
+                    <td class="fixed-width text-center">{{.Email}}</td>
+                    <td class="fixed-width text-center">{{.Identification}}</td>
+                    <td class="fixed-width text-center">{{.Cargo}}</td>
+                    <td class="fixed-width text-center">{{.Store}}</td>
+                    <td class="fixed-width text-center">{{.Status}}</td>
+                    <td class="fixed-width text-center">{{.PeriodoPrueba}}</td>
+                    <td class="fixed-width text-center">
+                        <button class="btn btn-sm btn-primary" data-toggle="modal" data-target="#editWorkerModal{{.ID}}">Editar</button>
+                        <form action="/admin/workers/delete/{{.ID}}" method="POST" style="display:inline;">
+                            <button type="submit" class="btn btn-sm btn-danger">Eliminar</button>
+                        </form>
+                    </td>
+                </tr>
+
+                <!-- Modal para Editar Trabajadores -->
+                <div class="modal fade" id="editWorkerModal{{.ID}}" tabindex="-1" role="dialog" aria-labelledby="editWorkerModalLabel{{.ID}}" aria-hidden="true">
+                    <div class="modal-dialog modal-lg" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="editWorkerModalLabel{{.ID}}">Editar Trabajador</h5>
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <form action="/admin/workers/update/{{.ID}}" method="POST">
+                                    <div class="form-group">
+                                        <label for="name">Nombre</label>
+                                        <input type="text" class="form-control" name="name" value="{{.Name}}">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="lastname">Apellido</label>
+                                        <input type="text" class="form-control" name="lastname" value="{{.Lastname}}">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="email">Email</label>
+                                        <input type="email" class="form-control" name="email" value="{{.Email}}">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="identification">Identificación</label>
+                                        <input type="text" class="form-control" name="identification" value="{{.Identification}}">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="cargo">Cargo</label>
+                                        <input type="text" class="form-control" name="cargo" value="{{.Cargo}}">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="store">Tienda</label>
+                                        <select class="form-control" name="store" required>
+                                            <option value="Calle Barcelona" {{if eq .Store "Calle Barcelona"}}selected{{end}}>Calle Barcelona</option>
+                                            <option value="Calle Real" {{if eq .Store "Calle Real"}}selected{{end}}>Calle Real</option>
+                                            <option value="Plaza Lugo" {{if eq .Store "Plaza Lugo"}}selected{{end}}>Plaza Lugo</option>
+                                            <option value="Av. de Oza" {{if eq .Store "Av. de Oza"}}selected{{end}}>Av. de Oza</option>
+                                            <option value="Av. Finisterre" {{if eq .Store "Av. Finisterre"}}selected{{end}}>Av. Finisterre</option>
+                                            <option value="Cuatro Caminos" {{if eq .Store "Cuatro Caminos"}}selected{{end}}>Cuatro Caminos</option>
+                                            <option value="Los Mallos" {{if eq .Store "Los Mallos"}}selected{{end}}>Los Mallos</option>
+                                            <option value="Gran Canaria" {{if eq .Store "Gran Canaria"}}selected{{end}}>Gran Canaria</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="status">Estado</label>
+                                        <select class="form-control" name="status">
+                                            <option value="Alta" {{if eq .Status "Alta"}}selected{{end}}>Alta</option>
+                                            <option value="Baja" {{if eq .Status "Baja"}}selected{{end}}>Baja</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="periodoPrueba">Período de Prueba</label>
+                                        <select class="form-control" name="periodoPrueba">
+                                            <option value="Si" {{if eq .PeriodoPrueba "Si"}}selected{{end}}>Si</option>
+                                            <option value="No" {{if eq .PeriodoPrueba "No"}}selected{{end}}>No</option>
+                                        </select>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Modal para Añadir Trabajadores -->
+    <div class="modal fade" id="addWorkerModal" tabindex="-1" role="dialog" aria-labelledby="addWorkerModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addWorkerModalLabel">Añadir Trabajador</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form action="/admin/workers/create" method="POST">
+                        <div class="form-group">
+                            <label for="name">Nombre</label>
+                            <input type="text" class="form-control" name="name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="lastname">Apellido</label>
+                            <input type="text" class="form-control" name="lastname" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            <input type="email" class="form-control" name="email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="identification">Identificación</label>
+                            <input type="text" class="form-control" name="identification" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="cargo">Cargo</label>
+                            <input type="text" class="form-control" name="cargo" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="store">Tienda</label>
+                            <select class="form-control" name="store" required>
+                                <option value="Calle Barcelona">Calle Barcelona</option>
+                                <option value="Calle Real">Calle Real</option>
+                                <option value="Plaza Lugo">Plaza Lugo</option>
+                                <option value="Av. de Oza">Av. de Oza</option>
+                                <option value="Av. Finisterre">Av. Finisterre</option>
+                                <option value="Cuatro Caminos">Cuatro Caminos</option>
+                                <option value="Los Mallos">Los Mallos</option>
+                                <option value="Gran Canaria">Gran Canaria</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="status">Estado</label>
+                            <select class="form-control" name="status">
+                                <option value="Alta">Alta</option>
+                                <option value="Baja">Baja</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="periodoPrueba">Período de Prueba</label>
+                            <select class="form-control" name="periodoPrueba">
+                                <option value="Si">Si</option>
+                                <option value="No">No</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Añadir Trabajador</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
+    <script>
+        function sortTableByStore() {
+            var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+            table = document.getElementById("workersTable");
+            switching = true;
+            dir = "asc"; 
+            while (switching) {
+                switching = false;
+                rows = table.rows;
+                for (i = 1; i < (rows.length - 1); i++) {
+                    shouldSwitch = false;
+                    x = rows[i].getElementsByTagName("TD")[5];
+                    y = rows[i + 1].getElementsByTagName("TD")[5];
+                    if (dir == "asc") {
+                        if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+                            shouldSwitch = true;
+                            break;
+                        }
+                    } else if (dir == "desc") {
+                        if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+                            shouldSwitch = true;
+                            break;
+                        }
+                    }
+                }
+                if (shouldSwitch) {
+                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                    switching = true;
+                    switchcount++; 
+                } else {
+                    if (switchcount == 0 && dir == "asc") {
+                        dir = "desc";
+                        switching = true;
+                    }
+                }
+            }
+        }
+
+        function filterTableByName() {
+            var input, filter, table, tr, td, i, txtValue;
+            input = document.getElementById("filterNameInput");
+            filter = input.value.toLowerCase();
+            table = document.getElementById("workersTable");
+            tr = table.getElementsByTagName("tr");
+            for (i = 1; i < tr.length; i++) {
+                tr[i].style.display = "none";
+                td = tr[i].getElementsByTagName("td");
+                for (var j = 0; j < td.length; j++) {
+                    if (td[j]) {
+                        txtValue = td[j].textContent || td[j].innerText;
+                        if (txtValue.toLowerCase().indexOf(filter) > -1) {
+                            tr[i].style.display = "";
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        function filterTableByStore() {
+            var select, filter, table, tr, td, i, txtValue;
+            select = document.getElementById("filterStoreSelect");
+            filter = select.value.toLowerCase();
+            table = document.getElementById("workersTable");
+            tr = table.getElementsByTagName("tr");
+            for (i = 1; i < tr.length; i++) {
+                td = tr[i].getElementsByTagName("td")[5];
+                if (td) {
+                    txtValue = td.textContent || td.innerText;
+                    if (filter === "" || txtValue.toLowerCase().indexOf(filter) > -1) {
+                        tr[i].style.display = "";
+                    } else {
+                        tr[i].style.display = "none";
+                    }
+                }       
+            }
+        }
+
+        function downloadExcel() {
+            // Crear una nueva tabla temporal sin la columna de "Acciones"
+            var originalTable = document.getElementById('workersTable');
+            var tempTable = document.createElement('table');
+            
+            // Copiar el encabezado, excluyendo la columna "Acciones"
+            var originalHeader = originalTable.querySelector('thead');
+            var tempHeader = originalHeader.cloneNode(true);
+            tempHeader.querySelector('th:last-child').remove(); // Eliminar la última columna
+            tempTable.appendChild(tempHeader);
+            
+            // Copiar el cuerpo de la tabla, excluyendo la columna "Acciones"
+            var originalBody = originalTable.querySelector('tbody');
+            var tempBody = originalBody.cloneNode(true);
+            tempBody.querySelectorAll('tr').forEach(function(row) {
+                row.querySelector('td:last-child').remove(); // Eliminar la última columna
+            });
+            tempTable.appendChild(tempBody);
+            
+            // Exportar la tabla temporal a Excel
+            var wb = XLSX.utils.book_new();
+            var ws = XLSX.utils.table_to_sheet(tempTable);
+            XLSX.utils.book_append_sheet(wb, ws, 'Trabajadores');
+            XLSX.writeFile(wb, 'trabajadores.xlsx');
+        }
+
+        
+    </script>
+</body>
+</html>
