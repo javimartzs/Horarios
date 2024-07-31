@@ -3,8 +3,7 @@ package main
 import (
 	"horariosapp/controllers"
 	"horariosapp/database"
-	"horariosapp/utils"
-	"html/template"
+
 	"log"
 
 	"github.com/gin-gonic/gin"
@@ -17,13 +16,7 @@ func main() {
 
 	// Configuramos GIN
 	r := gin.Default()
-	r.SetFuncMap(template.FuncMap{
-		"formatHour": utils.FormatHour,
-		"dateFormat": utils.DateFormat,
-		"seq":        utils.Seq,
-		"div":        utils.Div,
-		"mod":        utils.Mod,
-	})
+
 	r.LoadHTMLGlob("templates/*")
 
 	// Rutas para la autenticacion
@@ -42,6 +35,7 @@ func main() {
 
 	// Ruta protegida para administradores (weeks)
 	r.GET("/admin/horarios", controllers.ShowWeeksPage)
+	r.GET("/admin/horarios/:weekID", controllers.ShowWeekPage)
 
 	// Iniciamos el servidor
 	r.Run(":8080")

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Horarios - Semana {{ .Week.WeekID }}</title>
+    <!-- Enlace a Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        .table-sm td, .table-sm th {
+            padding: 0.3rem;
+        }
+        table {
+            font-size: 0.9rem;
+        }
+        .cell {
+            background-color: white; /* Color inicial de las celdas */
+        }
+        .cell.selected {
+            background-color: yellow !important; /* Color de fondo cuando la celda está seleccionada */
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <h1 class="my-4">Horarios para la semana {{ .Week.WeekID }}</h1>
+
+        {{range $index, $day := .Days}}
+        <h2>Fecha: {{ $day }}</h2>
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped table-sm">
+                <thead class="thead-dark">
+                    <tr>
+                        <th>Trabajador</th>
+                        {{range $.Intervals}}
+                        <th>{{ . }}</th>
+                        {{end}}
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range $.Workers}}
+                    <tr>
+                        <td>{{ .Name }}</td>
+                        {{range $.Intervals}}
+                        <td class="cell"></td> <!-- Celdas vacías para los intervalos -->
+                        {{end}}
+                        <td></td> <!-- Columna de Total -->
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+        {{end}}
+    </div>
+
+    <!-- Enlace a Bootstrap JS y dependencias -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var cells = document.querySelectorAll('td.cell');
+            cells.forEach(function (cell) {
+                cell.addEventListener('click', function () {
+                    cell.classList.toggle('selected');
+                });
+            });
+        });
+    </script>
+    
+</body>
+</html>
