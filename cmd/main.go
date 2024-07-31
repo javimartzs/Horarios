@@ -36,6 +36,7 @@ func main() {
 	// Ruta protegida para administradores (weeks)
 	r.GET("/admin/horarios", controllers.ShowWeeksPage)
 	r.GET("/admin/horarios/:weekID", controllers.ShowWeekPage)
+	r.POST("/admin/horarios/:weekID/save", controllers.SaveSchedule) // Ruta para guardar colores
 
 	// Iniciamos el servidor
 	r.Run(":8080")

@@ -16,17 +16,42 @@
         .cell {
             background-color: white; /* Color inicial de las celdas */
         }
-        .cell.selected {
-            background-color: yellow !important; /* Color de fondo cuando la celda está seleccionada */
-        }
+        .selected { background-color: rgb(190, 190, 190) !important; }
+        .btn-red { background-color: #ffcccc; color: black; } /* Pastel red */
+        .btn-green { background-color: #ccffcc; color: black; } /* Pastel green */
+        .btn-blue { background-color: #ccccff; color: black; } /* Pastel blue */
+        .btn-orange { background-color: #ffd9b3; color: black; } /* Pastel orange */
+        .btn-pink { background-color: #ffdfbf; color: black; } /* Pastel pink */
+        .btn-yellow { background-color: #ffffcc; color: black; } /* Pastel yellow */
+        .btn-purple { background-color: rgb(230, 204, 255); color: black; } /* Pastel purple */
+        .btn-light { background-color: #f8f9fa; color: black; } /* Light color for 'Nada' button */
+        .btn-primary { margin-left: 0.5rem; }
+        .center-table { margin: 0 auto; width: 50%; }
     </style>
 </head>
 <body>
     <div class="container-fluid">
-        <h1 class="my-4">Horarios para la semana {{ .Week.WeekID }}</h1>
+        <h1 class="my-4">Semana del {{ .Week.Start }}</h1>
 
-        {{range $index, $day := .Days}}
-        <h2>Fecha: {{ $day }}</h2>
+        <!-- Botones para cambiar colores -->
+        <div class="d-flex justify-content-between mb-4">
+            <button class="btn btn-red" onclick="changeColor('#ffcccc', 'work')">Calle Barcelona</button>
+            <button class="btn btn-green" onclick="changeColor('#ccffcc', 'work')">Plaza de Lugo</button>
+            <button class="btn btn-blue" onclick="changeColor('#ccccff', 'work')">Calle Real</button>
+            <button class="btn btn-orange" onclick="changeColor('#ffd9b3', 'work')">Av. Finisterre</button>
+            <button class="btn btn-pink" onclick="changeColor('#ffdfbf', 'work')">Cuatro Caminos</button>
+            <button class="btn btn-yellow" onclick="changeColor('#ffffcc', 'work')">Av. de Oza</button>
+            <button class="btn btn-purple" onclick="changeColor('rgb(230, 204, 255)', 'day-off')">Día Libre</button>
+            <button class="btn btn-light" onclick="changeColor('rgb(255, 255, 255)', 'none')">Nada</button>
+        </div>
+
+        <!-- Botón de guardar único en la parte superior -->
+        <div class="text-center mb-4">
+            <button id="save-button" class="btn btn-primary">Guardar Cambios</button>
+        </div>
+
+        {{range $dayIndex, $day := .Days}}
+        <h2 class="text-center mt-5">{{ $day }}</h2>
         <div class="table-responsive">
             <table class="table table-bordered table-striped table-sm">
                 <thead class="thead-dark">
@@ -39,19 +64,24 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {{range $.Workers}}
+                    {{range $worker := $.Workers}}
                     <tr>
-                        <td>{{ .Name }}</td>
-                        {{range $.Intervals}}
-                        <td class="cell"></td> <!-- Celdas vacías para los intervalos -->
+                        <td>{{ $worker.Name }}</td>
+                        {{range $interval := $.Intervals}}
+                        <td class="editable-cell"
+                            data-worker-id="{{ $worker.ID }}"
+                            data-interval="{{ $interval }}"
+                            data-day-index="{{ $dayIndex }}">
+                        </td>
                         {{end}}
-                        <td></td> <!-- Columna de Total -->
+                        <td class="total-cell"></td> <!-- Columna de Total -->
                     </tr>
                     {{end}}
                 </tbody>
             </table>
         </div>
         {{end}}
+
     </div>
 
     <!-- Enlace a Bootstrap JS y dependencias -->
@@ -59,13 +89,128 @@
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            var cells = document.querySelectorAll('td.cell');
-            cells.forEach(function (cell) {
-                cell.addEventListener('click', function () {
-                    cell.classList.toggle('selected');
-                });
+
+document.addEventListener('DOMContentLoaded', function () {
+    // Cargar y aplicar colores guardados
+    const cellColors = JSON.parse('{{ .CellColors | js }}');
+    Object.keys(cellColors).forEach(key => {
+        const [workerID, interval, dayIndex] = key.split('-');
+        const color = cellColors[key];
+        const cell = document.querySelector(`td[data-worker-id="${workerID}"][data-interval="${interval}"][data-day-index="${dayIndex}"]`);
+        if (cell) {
+            cell.style.backgroundColor = color;
+            cell.classList.add(getClassNameFromColor(color));
+        }
+    });
+
+    // Añadir eventos a las celdas
+    const cells = document.querySelectorAll('td.editable-cell');
+    cells.forEach(cell => {
+        cell.addEventListener('mousedown', startSelecting);
+        cell.addEventListener('mouseover', selectCell);
+    });
+
+    // Añadir evento al botón de guardar
+    document.querySelector('#save-button').addEventListener('click', saveColors);
+});
+        let selectedCells = [];
+        let isSelecting = false;
+    
+        function startSelecting(event) {
+            isSelecting = true;
+            selectCell(event);
+            document.addEventListener('mouseup', stopSelecting);
+        }
+    
+        function stopSelecting() {
+            isSelecting = false;
+            document.removeEventListener('mouseup', stopSelecting);
+        }
+    
+        function selectCell(event) {
+            if (isSelecting) {
+                const cell = event.target;
+                if (cell.classList.contains('editable-cell')) {
+                    if (!selectedCells.includes(cell)) {
+                        selectedCells.push(cell);
+                        cell.classList.add('selected');
+                    } else {
+                        const index = selectedCells.indexOf(cell);
+                        if (index > -1) {
+                            selectedCells.splice(index, 1);
+                            cell.classList.remove('selected');
+                        }
+                    }
+                }
+            }
+        }
+    
+        function changeColor(color, className) {
+            selectedCells.forEach(cell => {
+                cell.style.backgroundColor = color;
+                cell.classList.remove('selected', 'work', 'day-off', 'none');
+                cell.classList.add(className);
             });
+
+            updateAllTotals();
+            selectedCells = [];
+        }
+    
+        function updateTotal(row) {
+            const cells = row.querySelectorAll('td.editable-cell');
+            let total = 0;
+            cells.forEach(cell => {
+                const color = cell.style.backgroundColor;
+                // Asegúrate de comparar correctamente el color blanco
+                if (color !== 'rgb(255, 255, 255)' && color !== '') {
+                    if (color !== 'rgb(230, 204, 255)') {
+                        total += 0.5;
+                    }
+                }
+            });
+            const totalCell = row.querySelector('td.total-cell');
+            totalCell.textContent = total;
+        }
+    
+        function updateAllTotals() {
+            const rows = document.querySelectorAll('table tbody tr');
+            rows.forEach(row => updateTotal(row));
+        }
+    
+        function saveColors() {
+            const colors = {};
+            document.querySelectorAll('td.editable-cell').forEach(cell => {
+                const workerID = cell.getAttribute('data-worker-id');
+                const interval = cell.getAttribute('data-interval');
+                const dayIndex = cell.getAttribute('data-day-index');
+                const color = cell.style.backgroundColor;
+                colors[`${workerID}-${interval}-${dayIndex}`] = color;
+
+            });
+
+            fetch(`/admin/horarios/{{ .Week.WeekID }}/save`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(colors)
+            }).then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('Cambios guardados exitosamente');
+                } else {
+                    alert('Error al guardar los cambios');
+                }
+            });
+}    
+        document.addEventListener('DOMContentLoaded', function () {
+            const cells = document.querySelectorAll('td.editable-cell');
+            cells.forEach(cell => {
+                cell.addEventListener('mousedown', startSelecting);
+                cell.addEventListener('mouseover', selectCell);
+            });
+    
+            document.querySelector('#save-button').addEventListener('click', saveColors);
         });
     </script>
     

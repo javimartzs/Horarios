@@ -1,10 +1,13 @@
 package controllers
 
 import (
+	"encoding/json"
+	"fmt"
 	"horariosapp/database"
 	"horariosapp/models"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -69,30 +72,95 @@ func ShowWeekPage(c *gin.Context) {
 		return
 	}
 
-	// Obtener los días de la semana para esta semana
 	startDate, _ := time.Parse("2006-01-02", week.Start)
 	days := make([]time.Time, 7)
 	for i := 0; i < 7; i++ {
 		days[i] = startDate.AddDate(0, 0, i)
 	}
 
-	// Obtener todos los trabajadores
 	var workers []models.Worker
 	if err := database.DB.Find(&workers).Error; err != nil {
 		c.HTML(http.StatusInternalServerError, "500.html", gin.H{"error": err.Error()})
 		return
 	}
 
-	// Formatear fechas en español
+	var scheduleEntries []models.ScheduleEntry
+	database.DB.Where("week_id = ?", weekID).Find(&scheduleEntries)
+
+	entriesByDayAndWorker := make(map[int]map[uint]map[string]string)
+	cellColors := make(map[string]string)
+	for _, entry := range scheduleEntries {
+		if entriesByDayAndWorker[entry.DayIndex] == nil {
+			entriesByDayAndWorker[entry.DayIndex] = make(map[uint]map[string]string)
+		}
+		if entriesByDayAndWorker[entry.DayIndex][entry.WorkerID] == nil {
+			entriesByDayAndWorker[entry.DayIndex][entry.WorkerID] = make(map[string]string)
+		}
+		entriesByDayAndWorker[entry.DayIndex][entry.WorkerID][entry.Interval] = entry.Color
+		cellColors[fmt.Sprintf("%d-%s-%d", entry.WorkerID, entry.Interval, entry.DayIndex)] = entry.Color
+	}
+
 	formattedDays := make([]string, 7)
 	for i, day := range days {
 		formattedDays[i] = weekdays[day.Weekday()] + " " + strconv.Itoa(day.Day()) + " de " + months[day.Month()]
 	}
 
+	// Convertir cellColors a JSON
+	cellColorsJSON, err := json.Marshal(cellColors)
+	if err != nil {
+		c.HTML(http.StatusInternalServerError, "500.html", gin.H{"error": "Error al convertir colores a JSON"})
+		return
+	}
+
 	c.HTML(http.StatusOK, "week_detail.html", gin.H{
-		"Week":      week,
-		"Days":      formattedDays,
-		"Intervals": Intervals,
-		"Workers":   workers,
+		"Week":               week,
+		"Days":               formattedDays,
+		"Intervals":          Intervals,
+		"Workers":            workers,
+		"EntriesByDayWorker": entriesByDayAndWorker,
+		"CellColors":         string(cellColorsJSON), // Inyectar como cadena JSON
 	})
+}
+
+// ------------------------
+func SaveSchedule(c *gin.Context) {
+	weekID := c.Param("weekID")
+
+	var colors map[string]string
+	if err := c.BindJSON(&colors); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": "Invalid data"})
+		return
+	}
+
+	for key, color := range colors {
+		parts := strings.Split(key, "-")
+		if len(parts) != 3 {
+			continue
+		}
+
+		workerID, _ := strconv.Atoi(parts[0])
+		interval := parts[1]
+		dayIndex, _ := strconv.Atoi(parts[2])
+
+		var entry models.ScheduleEntry
+		err := database.DB.Where("week_id = ? AND worker_id = ? AND interval = ? AND day_index = ?", weekID, workerID, interval, dayIndex).First(&entry).Error
+
+		if err != nil {
+			// Si no existe la entrada, crear una nueva
+			entry = models.ScheduleEntry{
+				WeekID:   weekID,
+				WorkerID: uint(workerID),
+				Interval: interval,
+				DayIndex: dayIndex,
+				Color:    color,
+			}
+			database.DB.Create(&entry)
+		} else {
+			entry.Color = color
+			database.DB.Save(&entry)
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "success"})
+
 }
