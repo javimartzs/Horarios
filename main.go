@@ -44,7 +44,6 @@ func main() {
 		admin.GET("/calendar/:weekID", controllers.ShowWeekPage)
 		admin.POST("/calendar/:weekID/save", controllers.SaveSchedule)
 	}
-
 	// Iniciamos el servidor
 	r.Run(":8080")
 	log.Print("Server running on port :8080")
