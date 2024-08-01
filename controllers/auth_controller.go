@@ -9,21 +9,22 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// Renderizamos la pagina de inicio de sesion
+// Controller para renderizar la pagina de Inicio de session
 func ShowLoginPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "login.html", nil)
 }
 
-// Manejamos la logica de autenticacion
+// Controler con la logica de autenticacion
 func Login(c *gin.Context) {
 
 	var user models.User
+	// Extraemos los inputs del formulario de login
 	username := c.PostForm("username")
 	password := c.PostForm("password")
 
-	// Verificamos que la base de datos existe
+	// Verificamos si la base de datos existe
 	if database.DB == nil {
-		c.HTML(http.StatusInternalServerError, "login.html", gin.H{"error": "Database connection error"})
+		c.HTML(http.StatusInternalServerError, "login.html", gin.H{"error": "Database not found"})
 		return
 	}
 
@@ -33,17 +34,17 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	// Verificamos la contraseña del usuario
+	// Verificamos si la contraseña es del usuario registrado
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
 		c.HTML(http.StatusUnauthorized, "login.html", gin.H{"error": "Invalid username or password"})
 		return
 	}
 
-	// Crear la cookie de sesión basada en el rol del usuario.
+	// Creamos la cookie de session del rol del usuario y otra con su nombre
 	c.SetCookie("session", user.Role, 3600, "/", "localhost", false, true)
 	c.SetCookie("name", user.Name, 3600, "/", "localhost", false, true)
 
-	// Redirigir basado en el rol.
+	// Segun el rol del usuario lo redirigimos a una ruta determinada
 	if user.Role == "admin" {
 		c.Redirect(http.StatusFound, "/admin")
 	} else {
@@ -51,9 +52,8 @@ func Login(c *gin.Context) {
 	}
 }
 
-// Logout borra las cookies de sesión y redirige al usuario a la página de inicio de sesión.
+// Controller con la logica de logout (eliminando las cookies)
 func Logout(c *gin.Context) {
-	// Borrar las cookies de sesión.
 	c.SetCookie("session", "", -1, "/", "localhost", false, true)
 	c.Redirect(http.StatusFound, "/login")
 }

@@ -3,20 +3,22 @@ package main
 import (
 	"horariosapp/controllers"
 	"horariosapp/database"
-
 	"log"
 
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
-
-	// Inicamos la base de datos
+	// Iniciamos la base de datos
 	database.ConnectDB()
 
 	// Configuramos GIN
 	r := gin.Default()
 
+	// Sirve archivos estáticos desde la carpeta 'css'
+	r.Static("/css", "./css")
+
+	// Importamos los templates HTML
 	r.LoadHTMLGlob("templates/*")
 
 	// Rutas para la autenticacion
@@ -26,20 +28,24 @@ func main() {
 	r.POST("/logout", controllers.Logout)
 	r.GET("/logout", controllers.Logout)
 
-	// Ruta protegida para administradores (workers)
-	r.GET("/admin", controllers.ShowAdminPage)
-	r.GET("/admin/workers", controllers.ShowWorkersPage)
-	r.POST("/admin/workers/create", controllers.CreateWorker)
-	r.POST("/admin/workers/update/:id", controllers.UpdateWorker)
-	r.POST("/admin/workers/delete/:id", controllers.DeleteWorker)
+	// Grupo de rutas admin
+	admin := r.Group("/admin")
+	{
+		admin.GET("", controllers.ShowAdminPage)
 
-	// Ruta protegida para administradores (weeks)
-	r.GET("/admin/horarios", controllers.ShowWeeksPage)
-	r.GET("/admin/horarios/:weekID", controllers.ShowWeekPage)
-	r.POST("/admin/horarios/:weekID/save", controllers.SaveSchedule) // Ruta para guardar colores
+		// Rutas de trabajadores bajo el grupo admin
+		admin.GET("/workers", controllers.ShowWorkersPage)
+		admin.POST("/workers/create", controllers.CreateWorker)
+		admin.POST("/workers/update/:id", controllers.UpdateWorker)
+		admin.POST("/workers/delete/:id", controllers.DeleteWorker)
+
+		// Rutas para el calendario y las semanas bajo el grupo admin
+		admin.GET("/calendar", controllers.ShowWeeksPage)
+		admin.GET("/calendar/:weekID", controllers.ShowWeekPage)
+		admin.POST("/calendar/:weekID/save", controllers.SaveSchedule)
+	}
 
 	// Iniciamos el servidor
 	r.Run(":8080")
 	log.Print("Server running on port :8080")
-
 }

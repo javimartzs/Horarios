@@ -15,16 +15,16 @@ var DB *gorm.DB
 
 func ConnectDB() {
 
-	// Creamos la conexion a la base de datos de Postgres
-	dsn := "host=localhost user=postgres password=gagll1i1 dbname=horarios port=5432 sslmode=disable"
+	// Creamos la conexion a la base de datos de postgres
+	dsn := "host=localhost user=postgres password=gagll1i1 dbname=horarios port=5432"
 	var err error
 	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatal("Failed to connect to database", err)
 	}
 
-	// Migramos las struct de models como tablas de postgres
-	err = DB.AutoMigrate(&models.User{}, &models.Worker{}, &models.Week{}, &models.ScheduleEntry{}, &models.WorkerTotal{})
+	// Migramos las structs de los models como tablas de la base de datos
+	err = DB.AutoMigrate(&models.User{}, &models.Worker{}, &models.Week{}, &models.ScheduleEntry{}, &models.WorkerHours{})
 	if err != nil {
 		log.Fatal("Failed to migrate database", err)
 	}
@@ -32,14 +32,16 @@ func ConnectDB() {
 	// Creamos el usuario admin si no existe
 	createInitialUsers()
 
-	// Llenamos la tabla de semanas si está vacia
+	// Llenamos la tabla weeks con los datos generados
 	var count int64
 	DB.Model(&models.Week{}).Count(&count)
 	if count == 0 {
-		populateWeeks()
+		generateWeeks()
 	}
+
 }
 
+// Funcion para crear el primer usuario admin
 func createInitialUsers() {
 	users := []models.User{
 		{
@@ -53,33 +55,32 @@ func createInitialUsers() {
 	for _, u := range users {
 		var user models.User
 		if err := DB.First(&user, "username = ?", u.Username).Error; err == nil {
-			continue // El usuario ya existe
+			continue // el usuario ya existe
 		} else if err != gorm.ErrRecordNotFound {
-			log.Fatal("Failed to query user:", err)
+			log.Fatal("Failed to query user", err)
 		}
 
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
+		hashPasswoord, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
 		if err != nil {
-			log.Fatal("Failed to hash password:", err)
+			log.Fatal("Failed to hash password", err)
 		}
 
-		u.Password = string(hashedPassword)
+		u.Password = string(hashPasswoord)
 
 		if err := DB.Create(&u).Error; err != nil {
-			log.Fatal("Failed to create initial user:", err)
+			log.Fatal("Failed to create initial users", err)
 		}
-
-		log.Printf("Initial user created: username=%s, password=%s\n", u.Username, u.Password)
 	}
 }
 
-// Funcion para generar los datos de la tabla Week
-func populateWeeks() {
+// Funcion para generar los datos de la tabla week de postgres
+func generateWeeks() {
 	startYear := 2024
 	endYear := 2034
 
 	for year := startYear; year <= endYear; year++ {
 		for week := 1; week <= 52; week++ {
+
 			startDate, endDate := getWeekStartEnd(year, week)
 			weekEntry := models.Week{
 				Year:   year,
@@ -93,6 +94,7 @@ func populateWeeks() {
 	}
 }
 
+// Funcion que genera primer y ultimo dia de cada semana
 func getWeekStartEnd(year int, week int) (string, string) {
 	firstDayOfYear := time.Date(year, time.January, 1, 0, 0, 0, 0, time.UTC)
 	firstMonday := firstDayOfYear.AddDate(0, 0, (8-int(firstDayOfYear.Weekday()))%7)

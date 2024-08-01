@@ -14,28 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func ShowWeeksPage(c *gin.Context) {
-	role, err := c.Cookie("session")
-	if err != nil || role != "admin" {
-		c.Redirect(http.StatusFound, "/login")
-		return
-	}
-	yearParam := c.DefaultQuery("year", strconv.Itoa(time.Now().Year()))
-	year, _ := strconv.Atoi(yearParam)
-
-	var weeks []models.Week
-	database.DB.Where("year = ?", year).Find(&weeks)
-
-	years := []int{2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034}
-
-	c.HTML(http.StatusOK, "horarios.html", gin.H{
-		"Weeks":       weeks,
-		"Year":        year,
-		"Years":       years,
-		"CurrentDate": time.Now().Format("2006-01-02"), // Pass the current date to the template
-	})
-}
-
+// Intervalos horarios de las tablas diarias
 var Intervals = []string{
 	"08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
 	"12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30",
@@ -43,7 +22,7 @@ var Intervals = []string{
 	"20:00", "20:30", "21:00", "21:30", "22:00",
 }
 
-// Mapas para traducción
+// Mapas para traducción de días y meses
 var weekdays = map[time.Weekday]string{
 	time.Sunday:    "Domingo",
 	time.Monday:    "Lunes",
@@ -69,35 +48,44 @@ var months = map[time.Month]string{
 	time.December:  "Diciembre",
 }
 
+// ShowWeekPage maneja la visualización de la página de una semana específica
 func ShowWeekPage(c *gin.Context) {
+	// Verifica el rol del usuario a partir de la cookie de sesión
 	role, err := c.Cookie("session")
 	if err != nil || role != "admin" {
 		c.Redirect(http.StatusFound, "/login")
 		return
 	}
+
+	// Obtiene el parámetro 'weekID' de la URL
 	weekID := c.Param("weekID")
 
+	// Busca la semana en la base de datos
 	var week models.Week
 	if err := database.DB.First(&week, "week_id = ?", weekID).Error; err != nil {
-		c.HTML(http.StatusNotFound, "404.html", gin.H{"error": "Week not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Week not found"})
 		return
 	}
 
+	// Calcula las fechas de los 7 días de la semana
 	startDate, _ := time.Parse("2006-01-02", week.Start)
 	days := make([]time.Time, 7)
 	for i := 0; i < 7; i++ {
 		days[i] = startDate.AddDate(0, 0, i)
 	}
 
+	// Recupera los trabajadores de la base de datos
 	var workers []models.Worker
-	if err := database.DB.Find(&workers).Error; err != nil {
-		c.HTML(http.StatusInternalServerError, "500.html", gin.H{"error": err.Error()})
+	if err := database.DB.Where("status = ?", "Alta").Find(&workers).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
+	// Recupera las entradas del horario para la semana específica
 	var scheduleEntries []models.ScheduleEntry
 	database.DB.Where("week_id = ?", weekID).Find(&scheduleEntries)
 
+	// Organiza las entradas de horario por día y trabajador
 	entriesByDayAndWorker := make(map[int]map[uint]map[string]string)
 	cellColors := make(map[string]string)
 	for _, entry := range scheduleEntries {
@@ -111,15 +99,17 @@ func ShowWeekPage(c *gin.Context) {
 		cellColors[fmt.Sprintf("%d-%s-%d", entry.WorkerID, entry.Interval, entry.DayIndex)] = entry.Color
 	}
 
+	// Formatea las fechas para mostrar en la vista
 	formattedDays := make([]string, 7)
 	for i, day := range days {
 		formattedDays[i] = weekdays[day.Weekday()] + " " + strconv.Itoa(day.Day()) + " de " + months[day.Month()]
 	}
 
-	// Recuperar totales de horas
-	var workerTotals []models.WorkerTotal
+	// Recupera los totales de horas trabajadas
+	var workerTotals []models.WorkerHours
 	database.DB.Where("week_id = ?", weekID).Find(&workerTotals)
 
+	// Organiza los totales de horas por trabajador y día
 	totalsByWorkerAndDay := make(map[uint]map[int]float64)
 	for _, total := range workerTotals {
 		if totalsByWorkerAndDay[total.WorkerID] == nil {
@@ -128,7 +118,7 @@ func ShowWeekPage(c *gin.Context) {
 		totalsByWorkerAndDay[total.WorkerID][total.DayIndex] = total.TotalHours
 	}
 
-	// Crear resumen semanal
+	// Crea un resumen semanal para cada trabajador
 	weeklySummaries := []map[string]interface{}{}
 	for _, worker := range workers {
 		totalHours := 0.0
@@ -142,7 +132,7 @@ func ShowWeekPage(c *gin.Context) {
 		})
 	}
 
-	// Obtener lista de tiendas
+	// Obtiene la lista de tiendas
 	storeSet := make(map[string]struct{})
 	for _, worker := range workers {
 		storeSet[worker.Store] = struct{}{}
@@ -153,34 +143,36 @@ func ShowWeekPage(c *gin.Context) {
 		stores = append(stores, store)
 	}
 
-	// Convertir cellColors a JSON escapado
+	// Convierte cellColors y totalsByWorkerAndDay a JSON
 	cellColorsJSON, err := json.Marshal(cellColors)
 	if err != nil {
-		c.HTML(http.StatusInternalServerError, "500.html", gin.H{"error": "Error al convertir colores a JSON"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al convertir colores a JSON"})
 		return
 	}
 
 	totalsJSON, err := json.Marshal(totalsByWorkerAndDay)
 	if err != nil {
-		c.HTML(http.StatusInternalServerError, "500.html", gin.H{"error": "Error al convertir totales a JSON"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al convertir totales a JSON"})
 		return
 	}
 
-	c.HTML(http.StatusOK, "week_detail.html", gin.H{
+	// Renderiza la vista con los datos obtenidos
+	c.HTML(http.StatusOK, "week.html", gin.H{
 		"Week":               week,
 		"Days":               formattedDays,
 		"Intervals":          Intervals,
 		"Workers":            workers,
 		"EntriesByDayWorker": entriesByDayAndWorker,
-		"CellColors":         template.JS(cellColorsJSON), // Inyectar como cadena JSON escapada
-		"WorkerTotals":       template.JS(totalsJSON),     // Inyectar totales como cadena JSON escapada
+		"CellColors":         template.JS(cellColorsJSON), // Inyecta JSON escapado en la plantilla
+		"WorkerTotals":       template.JS(totalsJSON),     // Inyecta JSON escapado en la plantilla
 		"Stores":             stores,
-		"WeeklySummaries":    weeklySummaries, // Resumen semanal
+		"WeeklySummaries":    weeklySummaries, // Resumen semanal de horas
 	})
 }
 
 // ----------------------------------------------------------------------------------------------------------
 
+// SaveSchedule maneja el guardado de las entradas de horario y los totales en la base de datos
 func SaveSchedule(c *gin.Context) {
 	weekIDStr := c.Param("weekID")
 	weekID, err := strconv.ParseUint(weekIDStr, 10, 64)
@@ -236,11 +228,11 @@ func SaveSchedule(c *gin.Context) {
 		workerIDInt, _ := strconv.Atoi(workerID)
 		for dayIndexStr, totalHours := range days {
 			dayIndex, _ := strconv.Atoi(dayIndexStr)
-			var workerTotal models.WorkerTotal
+			var workerTotal models.WorkerHours
 			err := database.DB.Where("worker_id = ? AND week_id = ? AND day_index = ?", uint(workerIDInt), uint(weekID), dayIndex).First(&workerTotal).Error
 
 			if err != nil {
-				workerTotal = models.WorkerTotal{
+				workerTotal = models.WorkerHours{
 					WorkerID:   uint(workerIDInt),
 					WeekID:     uint(weekID),
 					DayIndex:   dayIndex,
