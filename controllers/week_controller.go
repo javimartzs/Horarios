@@ -119,6 +119,31 @@ func ShowWeekPage(c *gin.Context) {
 		totalsByWorkerAndDay[total.WorkerID][total.DayIndex] = total.TotalHours
 	}
 
+	// Crear resumen semanal
+	weeklySummaries := []map[string]interface{}{}
+	for _, worker := range workers {
+		totalHours := 0.0
+		for _, dayTotals := range totalsByWorkerAndDay[worker.ID] {
+			totalHours += dayTotals
+		}
+		weeklySummaries = append(weeklySummaries, map[string]interface{}{
+			"WorkerName": worker.Name,
+			"Store":      worker.Store,
+			"TotalHours": totalHours,
+		})
+	}
+
+	// Obtener lista de tiendas
+	storeSet := make(map[string]struct{})
+	for _, worker := range workers {
+		storeSet[worker.Store] = struct{}{}
+	}
+
+	stores := make([]string, 0, len(storeSet))
+	for store := range storeSet {
+		stores = append(stores, store)
+	}
+
 	// Convertir cellColors a JSON escapado
 	cellColorsJSON, err := json.Marshal(cellColors)
 	if err != nil {
@@ -140,6 +165,8 @@ func ShowWeekPage(c *gin.Context) {
 		"EntriesByDayWorker": entriesByDayAndWorker,
 		"CellColors":         template.JS(cellColorsJSON), // Inyectar como cadena JSON escapada
 		"WorkerTotals":       template.JS(totalsJSON),     // Inyectar totales como cadena JSON escapada
+		"Stores":             stores,
+		"WeeklySummaries":    weeklySummaries, // Resumen semanal
 	})
 }
 

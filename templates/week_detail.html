@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Horarios - Semana {{ .Week.WeekID }}</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <style>
         .table-sm td, .table-sm th {
             padding: 0.3rem;
@@ -12,7 +13,7 @@
         table {
             font-size: 0.9rem;
         }
-        .cell {
+        .cell, .editable-cell {
             background-color: white; /* Color inicial de las celdas */
         }
         .selected { background-color: rgb(190, 190, 190) !important; }
@@ -26,12 +27,17 @@
         .btn-light { background-color: #f8f9fa; color: black; } /* Light color for 'Nada' button */
         .btn-primary { margin-left: 0.5rem; }
         .center-table { margin: 0 auto; width: 50%; }
+        .highlight-red { background-color: #ffcccc !important; } /* Rojo pastel */
+        .highlight-green { background-color: #ccffcc !important; } /* Verde pastel */
     </style>
 </head>
-<body>
-    <div class="container-fluid">
+<body class="bg-light">
+    <div class="d-flex container-fluid mt-5 justify-content-between align-items-center">
         <h1 class="my-4">Semana del {{ .Week.Start }}</h1>
-
+        <a href="/admin" class="btn btn-secondary text-white px-3">Volver</a>
+    </div>
+    <div class="container-fluid mt-5">
+        <!-- Botones para seleccionar colores -->
         <div class="d-flex justify-content-between mb-4">
             <button class="btn btn-red" onclick="changeColor('rgb(255, 204, 204)', 'btn-red')">Calle Barcelona</button>
             <button class="btn btn-green" onclick="changeColor('rgb(204, 255, 204)', 'btn-green')">Plaza de Lugo</button>
@@ -41,16 +47,17 @@
             <button class="btn btn-yellow" onclick="changeColor('rgb(255, 255, 204)', 'btn-yellow')">Av. de Oza</button>
             <button class="btn btn-purple" onclick="changeColor('rgb(230, 204, 255)', 'btn-purple')">Día Libre</button>
             <button class="btn btn-light" onclick="changeColor('rgb(255, 255, 255)', 'btn-light')">Nada</button>
-        </div>
-
-        <div class="text-center mb-4">
-            <button id="save-button" class="btn btn-primary">Guardar Cambios</button>
+            <select id="filter-select" class="form-control" style="width: auto;" multiple="multiple" onchange="filterWorkers()">
+                {{range .Stores}}
+                <option value="{{ . }}">{{ . }}</option>
+                {{end}}
+            </select>
         </div>
 
         {{range $dayIndex, $day := .Days}}
         <h2 class="text-center mt-5">{{ $day }}</h2>
         <div class="table-responsive">
-            <table class="table table-bordered table-striped table-sm">
+            <table class="table table-bordered table-sm">
                 <thead class="thead-dark">
                     <tr>
                         <th>Trabajador</th>
@@ -60,9 +67,9 @@
                         <th>Total</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="worker-rows">
                     {{range $worker := $.Workers}}
-                    <tr>
+                    <tr class="worker-row" data-store="{{ $worker.Store }}" data-worker-name="{{ $worker.Name }}">
                         <td>{{ $worker.Name }}</td>
                         {{range $interval := $.Intervals}}
                         <td class="editable-cell"
@@ -79,13 +86,39 @@
         </div>
         {{end}}
 
+        <!-- Tabla resumen -->
+        <h2 class="text-center mt-5">Resumen Semanal</h2>
+        <div class="container mb-5 text-center">
+            <table class="table table-bordered table-striped table-sm">
+                <thead class="thead-dark">
+                    <tr>
+                        <th>Trabajador</th>
+                        <th>Total de Horas</th>
+                    </tr>
+                </thead>
+                <tbody id="summary-rows">
+                    {{range $summary := .WeeklySummaries}}
+                    <tr class="summary-row" data-worker-name="{{ $summary.WorkerName }}">
+                        <td>{{ $summary.WorkerName }}</td>
+                        <td class="summary-hours">{{ $summary.TotalHours }}</td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            // Inicializar Select2 para el selector de tiendas
+            $('#filter-select').select2({
+                placeholder: "Filtrar por Tienda"
+            });
+
             const cellColors = JSON.parse(`{{ .CellColors }}`);
             Object.keys(cellColors).forEach(key => {
                 const [workerID, interval, dayIndex] = key.split('-');
@@ -112,6 +145,7 @@
             });
 
             updateAllTotals();
+            highlightSummaryHours();
 
             const cells = document.querySelectorAll('td.editable-cell');
             cells.forEach(cell => {
@@ -119,7 +153,11 @@
                 cell.addEventListener('mouseover', selectCell);
             });
 
+            document.addEventListener('mouseup', stopSelecting);
             document.querySelector('#save-button').addEventListener('click', saveColors);
+            
+            // Ordenar los trabajadores por tienda al cargar la página
+            sortWorkers();
         });
 
         let selectedCells = [];
@@ -128,12 +166,10 @@
         function startSelecting(event) {
             isSelecting = true;
             selectCell(event);
-            document.addEventListener('mouseup', stopSelecting);
         }
 
         function stopSelecting() {
             isSelecting = false;
-            document.removeEventListener('mouseup', stopSelecting);
         }
 
         function selectCell(event) {
@@ -165,6 +201,7 @@
 
             updateAllTotals();
             selectedCells = [];
+            saveColors(); // Guardar cambios automáticamente después de cambiar el color
         }
 
         function updateTotal(row) {
@@ -183,8 +220,21 @@
         }
 
         function updateAllTotals() {
-            const rows = document.querySelectorAll('table tbody tr');
+            const rows = document.querySelectorAll('table tbody tr.worker-row');
             rows.forEach(row => updateTotal(row));
+        }
+
+        function highlightSummaryHours() {
+            document.querySelectorAll('td.summary-hours').forEach(cell => {
+                const hours = parseFloat(cell.textContent) || 0;
+                if (hours > 40) {
+                    cell.classList.add('highlight-red');
+                    cell.classList.remove('highlight-green');
+                } else {
+                    cell.classList.add('highlight-green');
+                    cell.classList.remove('highlight-red');
+                }
+            });
         }
 
         function saveColors() {
@@ -218,7 +268,8 @@
             }).then(response => response.json())
             .then(data => {
                 if (data.status === 'success') {
-                    alert('Cambios guardados exitosamente');
+                    window.location.reload(); // Recargar la página
+                    highlightSummaryHours();
                 } else {
                     alert('Error al guardar los cambios');
                 }
@@ -237,6 +288,48 @@
                 case 'rgb(255, 255, 255)': return 'btn-light';
                 default: return null;
             }
+        }
+
+        function sortWorkers() {
+            const tableBodies = document.querySelectorAll('table tbody');
+            tableBodies.forEach(tbody => {
+                const rows = Array.from(tbody.querySelectorAll('tr'));
+                rows.sort((a, b) => {
+                    const nameA = a.getAttribute('data-worker-name').toLowerCase();
+                    const nameB = b.getAttribute('data-worker-name').toLowerCase();
+
+                    if (nameA < nameB) return -1;
+                    if (nameA > nameB) return 1;
+                    return 0;
+                });
+                rows.forEach(row => tbody.appendChild(row));
+            });
+
+            // Ordenar también la tabla resumen semanal
+            const summaryRows = Array.from(document.querySelectorAll('tbody#summary-rows tr'));
+            summaryRows.sort((a, b) => {
+                const nameA = a.getAttribute('data-worker-name').toLowerCase();
+                const nameB = b.getAttribute('data-worker-name').toLowerCase();
+
+                if (nameA < nameB) return -1;
+                if (nameA > nameB) return 1;
+                return 0;
+            });
+            const summaryTbody = document.querySelector('tbody#summary-rows');
+            summaryRows.forEach(row => summaryTbody.appendChild(row));
+        }
+
+        function filterWorkers() {
+            const selectedOptions = $('#filter-select').val();
+            const rows = document.querySelectorAll('tr.worker-row');
+            rows.forEach(row => {
+                const store = row.getAttribute('data-store');
+                if (selectedOptions.length === 0 || selectedOptions.includes(store)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
         }
     </script>
 </body>
