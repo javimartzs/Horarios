@@ -15,6 +15,11 @@ import (
 )
 
 func ShowWeeksPage(c *gin.Context) {
+	role, err := c.Cookie("session")
+	if err != nil || role != "admin" {
+		c.Redirect(http.StatusFound, "/login")
+		return
+	}
 	yearParam := c.DefaultQuery("year", strconv.Itoa(time.Now().Year()))
 	year, _ := strconv.Atoi(yearParam)
 
@@ -65,6 +70,11 @@ var months = map[time.Month]string{
 }
 
 func ShowWeekPage(c *gin.Context) {
+	role, err := c.Cookie("session")
+	if err != nil || role != "admin" {
+		c.Redirect(http.StatusFound, "/login")
+		return
+	}
 	weekID := c.Param("weekID")
 
 	var week models.Week
