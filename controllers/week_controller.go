@@ -14,7 +14,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Visualizacion de la lista de semanas por años
 func ShowWeeksPage(c *gin.Context) {
 	yearParam := c.DefaultQuery("year", strconv.Itoa(time.Now().Year()))
 	year, _ := strconv.Atoi(yearParam)
@@ -25,11 +24,11 @@ func ShowWeeksPage(c *gin.Context) {
 	years := []int{2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034}
 
 	c.HTML(http.StatusOK, "horarios.html", gin.H{
-		"Weeks": weeks,
-		"Year":  year,
-		"Years": years,
+		"Weeks":       weeks,
+		"Year":        year,
+		"Years":       years,
+		"CurrentDate": time.Now().Format("2006-01-02"), // Pass the current date to the template
 	})
-
 }
 
 var Intervals = []string{

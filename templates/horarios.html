@@ -23,7 +23,7 @@
         <div class="row">
             {{range .Weeks}}
             <div class="col-md-6 mb-2">
-                <a href="/admin/horarios/{{.WeekID}}" class="btn btn-outline-secondary btn-block">
+                <a href="/admin/horarios/{{.WeekID}}" class="btn {{if gt $.CurrentDate .End}}btn-secondary{{else}}btn-outline-secondary{{end}} btn-block">
                     Semana {{.Week}}: {{.Start}} - {{.End}}
                 </a>
             </div>
