@@ -24,7 +24,7 @@ func ConnectDB() {
 	}
 
 	// Migramos las struct de models como tablas de postgres
-	err = DB.AutoMigrate(&models.User{}, &models.Worker{}, &models.Week{}, &models.ScheduleEntry{})
+	err = DB.AutoMigrate(&models.User{}, &models.Worker{}, &models.Week{}, &models.ScheduleEntry{}, &models.WorkerTotal{})
 	if err != nil {
 		log.Fatal("Failed to migrate database", err)
 	}

@@ -74,7 +74,7 @@
                             data-day-index="{{ $dayIndex }}">
                         </td>
                         {{end}}
-                        <td class="total-cell"></td> <!-- Columna de Total -->
+                        <td class="total-cell" data-worker-id="{{ $worker.ID }}" data-day-index="{{ $dayIndex }}"></td> <!-- Columna de Total -->
                     </tr>
                     {{end}}
                 </tbody>
@@ -104,6 +104,21 @@
                     }
                 }
             });
+
+            // Aplicar totales guardados
+            const workerTotals = JSON.parse(`{{ .WorkerTotals }}`);
+            Object.keys(workerTotals).forEach(workerID => {
+                Object.keys(workerTotals[workerID]).forEach(dayIndex => {
+                    const total = workerTotals[workerID][dayIndex];
+                    const totalCell = document.querySelector(`td.total-cell[data-worker-id="${workerID}"][data-day-index="${dayIndex}"]`);
+                    if (totalCell) {
+                        totalCell.textContent = total;
+                    }
+                });
+            });
+
+            // Actualizar todos los totales después de aplicar los colores
+            updateAllTotals();
 
             // Añadir eventos a las celdas
             const cells = document.querySelectorAll('td.editable-cell');
@@ -184,12 +199,24 @@
 
         function saveColors() {
             const colors = {};
+            const totals = {};
+
             document.querySelectorAll('td.editable-cell').forEach(cell => {
                 const workerID = cell.getAttribute('data-worker-id');
                 const interval = cell.getAttribute('data-interval');
                 const dayIndex = cell.getAttribute('data-day-index');
                 const color = cell.style.backgroundColor;
                 colors[`${workerID}-${interval}-${dayIndex}`] = color;
+
+                if (color !== 'rgb(255, 255, 255)' && color !== '') {
+                    if (!totals[workerID]) {
+                        totals[workerID] = {};
+                    }
+                    if (!totals[workerID][dayIndex]) {
+                        totals[workerID][dayIndex] = 0;
+                    }
+                    totals[workerID][dayIndex] += 0.5; // Cada intervalo es 0.5 horas
+                }
             });
 
             fetch(`/admin/horarios/{{ .Week.WeekID }}/save`, {
@@ -197,7 +224,7 @@
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(colors)
+                body: JSON.stringify({ colors, totals })
             }).then(response => response.json())
             .then(data => {
                 if (data.status === 'success') {

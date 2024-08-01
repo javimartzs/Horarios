@@ -107,10 +107,28 @@ func ShowWeekPage(c *gin.Context) {
 		formattedDays[i] = weekdays[day.Weekday()] + " " + strconv.Itoa(day.Day()) + " de " + months[day.Month()]
 	}
 
+	// Recuperar totales de horas
+	var workerTotals []models.WorkerTotal
+	database.DB.Where("week_id = ?", weekID).Find(&workerTotals)
+
+	totalsByWorkerAndDay := make(map[uint]map[int]float64)
+	for _, total := range workerTotals {
+		if totalsByWorkerAndDay[total.WorkerID] == nil {
+			totalsByWorkerAndDay[total.WorkerID] = make(map[int]float64)
+		}
+		totalsByWorkerAndDay[total.WorkerID][total.DayIndex] = total.TotalHours
+	}
+
 	// Convertir cellColors a JSON escapado
 	cellColorsJSON, err := json.Marshal(cellColors)
 	if err != nil {
 		c.HTML(http.StatusInternalServerError, "500.html", gin.H{"error": "Error al convertir colores a JSON"})
+		return
+	}
+
+	totalsJSON, err := json.Marshal(totalsByWorkerAndDay)
+	if err != nil {
+		c.HTML(http.StatusInternalServerError, "500.html", gin.H{"error": "Error al convertir totales a JSON"})
 		return
 	}
 
@@ -121,19 +139,33 @@ func ShowWeekPage(c *gin.Context) {
 		"Workers":            workers,
 		"EntriesByDayWorker": entriesByDayAndWorker,
 		"CellColors":         template.JS(cellColorsJSON), // Inyectar como cadena JSON escapada
+		"WorkerTotals":       template.JS(totalsJSON),     // Inyectar totales como cadena JSON escapada
 	})
 }
 
 // ----------------------------------------------------------------------------------------------------------
 func SaveSchedule(c *gin.Context) {
-	weekID := c.Param("weekID")
+	weekIDStr := c.Param("weekID")
+	weekID, err := strconv.ParseUint(weekIDStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": "Invalid weekID"})
+		return
+	}
 
-	var colors map[string]string
-	if err := c.BindJSON(&colors); err != nil {
+	var requestData struct {
+		Colors map[string]string             `json:"colors"`
+		Totals map[string]map[string]float64 `json:"totals"`
+	}
+
+	if err := c.BindJSON(&requestData); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": "Invalid data"})
 		return
 	}
 
+	colors := requestData.Colors
+	totals := requestData.Totals
+
+	// Almacenar entradas de colores
 	for key, color := range colors {
 		parts := strings.Split(key, "-")
 		if len(parts) != 3 {
@@ -145,12 +177,12 @@ func SaveSchedule(c *gin.Context) {
 		dayIndex, _ := strconv.Atoi(parts[2])
 
 		var entry models.ScheduleEntry
-		err := database.DB.Where("week_id = ? AND worker_id = ? AND interval = ? AND day_index = ?", weekID, workerID, interval, dayIndex).First(&entry).Error
+		err := database.DB.Where("week_id = ? AND worker_id = ? AND interval = ? AND day_index = ?", uint(weekID), workerID, interval, dayIndex).First(&entry).Error
 
 		if err != nil {
 			// Si no existe la entrada, crear una nueva
 			entry = models.ScheduleEntry{
-				WeekID:   weekID,
+				WeekID:   uint(weekID),
 				WorkerID: uint(workerID),
 				Interval: interval,
 				DayIndex: dayIndex,
@@ -163,6 +195,29 @@ func SaveSchedule(c *gin.Context) {
 		}
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "success"})
+	// Guardar totales en la base de datos
+	for workerID, days := range totals {
+		workerIDInt, _ := strconv.Atoi(workerID)
+		for dayIndexStr, totalHours := range days {
+			dayIndex, _ := strconv.Atoi(dayIndexStr)
+			var workerTotal models.WorkerTotal
+			err := database.DB.Where("worker_id = ? AND week_id = ? AND day_index = ?", uint(workerIDInt), uint(weekID), dayIndex).First(&workerTotal).Error
 
+			if err != nil {
+				// Si no existe la entrada, crear una nueva
+				workerTotal = models.WorkerTotal{
+					WorkerID:   uint(workerIDInt),
+					WeekID:     uint(weekID),
+					DayIndex:   dayIndex,
+					TotalHours: totalHours,
+				}
+				database.DB.Create(&workerTotal)
+			} else {
+				workerTotal.TotalHours = totalHours
+				database.DB.Save(&workerTotal)
+			}
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "success"})
 }

@@ -13,9 +13,18 @@ type Week struct {
 
 type ScheduleEntry struct {
 	gorm.Model
-	WeekID   string `gorm:"index:idx_week_worker_interval_day,unique"` // Índice único
+	WeekID   uint   `gorm:"index:idx_week_worker_interval_day,unique"` // Índice único
 	WorkerID uint   `gorm:"index:idx_week_worker_interval_day,unique"`
 	Interval string `gorm:"index:idx_week_worker_interval_day,unique"`
 	DayIndex int    `gorm:"index:idx_week_worker_interval_day,unique"`
 	Color    string
+}
+
+type WorkerTotal struct {
+	gorm.Model
+	ID         uint    `gorm:"primaryKey"`
+	WorkerID   uint    `gorm:"not null"`
+	WeekID     uint    `gorm:"not null"`
+	DayIndex   int     `gorm:"not null"`
+	TotalHours float64 `gorm:"not null"`
 }
