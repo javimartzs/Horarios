@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Horarios - Semana {{ .Week.WeekID }}</title>
-    <!-- Enlace a Bootstrap CSS -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <style>
         .table-sm td, .table-sm th {
@@ -33,7 +32,6 @@
     <div class="container-fluid">
         <h1 class="my-4">Semana del {{ .Week.Start }}</h1>
 
-        <!-- Botones para cambiar colores -->
         <div class="d-flex justify-content-between mb-4">
             <button class="btn btn-red" onclick="changeColor('rgb(255, 204, 204)', 'btn-red')">Calle Barcelona</button>
             <button class="btn btn-green" onclick="changeColor('rgb(204, 255, 204)', 'btn-green')">Plaza de Lugo</button>
@@ -45,7 +43,6 @@
             <button class="btn btn-light" onclick="changeColor('rgb(255, 255, 255)', 'btn-light')">Nada</button>
         </div>
 
-        <!-- Botón de guardar único en la parte superior -->
         <div class="text-center mb-4">
             <button id="save-button" class="btn btn-primary">Guardar Cambios</button>
         </div>
@@ -74,7 +71,7 @@
                             data-day-index="{{ $dayIndex }}">
                         </td>
                         {{end}}
-                        <td class="total-cell" data-worker-id="{{ $worker.ID }}" data-day-index="{{ $dayIndex }}"></td> <!-- Columna de Total -->
+                        <td class="total-cell" data-worker-id="{{ $worker.ID }}" data-day-index="{{ $dayIndex }}"></td>
                     </tr>
                     {{end}}
                 </tbody>
@@ -84,13 +81,11 @@
 
     </div>
 
-    <!-- Enlace a Bootstrap JS y dependencias -->
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            // Cargar y aplicar colores guardados
             const cellColors = JSON.parse(`{{ .CellColors }}`);
             Object.keys(cellColors).forEach(key => {
                 const [workerID, interval, dayIndex] = key.split('-');
@@ -105,7 +100,6 @@
                 }
             });
 
-            // Aplicar totales guardados
             const workerTotals = JSON.parse(`{{ .WorkerTotals }}`);
             Object.keys(workerTotals).forEach(workerID => {
                 Object.keys(workerTotals[workerID]).forEach(dayIndex => {
@@ -117,17 +111,14 @@
                 });
             });
 
-            // Actualizar todos los totales después de aplicar los colores
             updateAllTotals();
 
-            // Añadir eventos a las celdas
             const cells = document.querySelectorAll('td.editable-cell');
             cells.forEach(cell => {
                 cell.addEventListener('mousedown', startSelecting);
                 cell.addEventListener('mouseover', selectCell);
             });
 
-            // Añadir evento al botón de guardar
             document.querySelector('#save-button').addEventListener('click', saveColors);
         });
 
@@ -181,7 +172,6 @@
             let total = 0;
             cells.forEach(cell => {
                 const color = cell.style.backgroundColor;
-                // Asegúrate de comparar correctamente el color blanco
                 if (color !== 'rgb(255, 255, 255)' && color !== '') {
                     if (color !== 'rgb(230, 204, 255)') {
                         total += 0.5;
@@ -207,16 +197,16 @@
                 const dayIndex = cell.getAttribute('data-day-index');
                 const color = cell.style.backgroundColor;
                 colors[`${workerID}-${interval}-${dayIndex}`] = color;
+            });
 
-                if (color !== 'rgb(255, 255, 255)' && color !== '') {
-                    if (!totals[workerID]) {
-                        totals[workerID] = {};
-                    }
-                    if (!totals[workerID][dayIndex]) {
-                        totals[workerID][dayIndex] = 0;
-                    }
-                    totals[workerID][dayIndex] += 0.5; // Cada intervalo es 0.5 horas
+            document.querySelectorAll('td.total-cell').forEach(cell => {
+                const workerID = cell.getAttribute('data-worker-id');
+                const dayIndex = cell.getAttribute('data-day-index');
+                const total = parseFloat(cell.textContent) || 0;
+                if (!totals[workerID]) {
+                    totals[workerID] = {};
                 }
+                totals[workerID][dayIndex] = total;
             });
 
             fetch(`/admin/horarios/{{ .Week.WeekID }}/save`, {

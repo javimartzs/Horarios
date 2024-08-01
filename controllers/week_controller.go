@@ -144,6 +144,7 @@ func ShowWeekPage(c *gin.Context) {
 }
 
 // ----------------------------------------------------------------------------------------------------------
+
 func SaveSchedule(c *gin.Context) {
 	weekIDStr := c.Param("weekID")
 	weekID, err := strconv.ParseUint(weekIDStr, 10, 64)
@@ -180,7 +181,6 @@ func SaveSchedule(c *gin.Context) {
 		err := database.DB.Where("week_id = ? AND worker_id = ? AND interval = ? AND day_index = ?", uint(weekID), workerID, interval, dayIndex).First(&entry).Error
 
 		if err != nil {
-			// Si no existe la entrada, crear una nueva
 			entry = models.ScheduleEntry{
 				WeekID:   uint(weekID),
 				WorkerID: uint(workerID),
@@ -204,7 +204,6 @@ func SaveSchedule(c *gin.Context) {
 			err := database.DB.Where("worker_id = ? AND week_id = ? AND day_index = ?", uint(workerIDInt), uint(weekID), dayIndex).First(&workerTotal).Error
 
 			if err != nil {
-				// Si no existe la entrada, crear una nueva
 				workerTotal = models.WorkerTotal{
 					WorkerID:   uint(workerIDInt),
 					WeekID:     uint(weekID),
