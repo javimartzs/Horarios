@@ -41,8 +41,8 @@ func Login(c *gin.Context) {
 	}
 
 	// Creamos la cookie de session del rol del usuario y otra con su nombre
-	c.SetCookie("session", user.Role, 3600, "/", "localhost", false, true)
-	c.SetCookie("name", user.Name, 3600, "/", "localhost", false, true)
+	c.SetCookie("session", user.Role, 3600, "/", "", false, true)
+	c.SetCookie("name", user.Name, 3600, "/", "", false, true)
 
 	// Segun el rol del usuario lo redirigimos a una ruta determinada
 	if user.Role == "admin" {
@@ -54,6 +54,6 @@ func Login(c *gin.Context) {
 
 // Controller con la logica de logout (eliminando las cookies)
 func Logout(c *gin.Context) {
-	c.SetCookie("session", "", -1, "/", "localhost", false, true)
+	c.SetCookie("session", "", -1, "/", "", false, true)
 	c.Redirect(http.StatusFound, "/login")
 }
