@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"horariosapp/database"
 	"horariosapp/models"
+	"html/template"
 	"net/http"
 	"strconv"
 	"strings"
@@ -13,6 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// Visualizacion de la lista de semanas por años
 func ShowWeeksPage(c *gin.Context) {
 	yearParam := c.DefaultQuery("year", strconv.Itoa(time.Now().Year()))
 	year, _ := strconv.Atoi(yearParam)
@@ -105,7 +107,7 @@ func ShowWeekPage(c *gin.Context) {
 		formattedDays[i] = weekdays[day.Weekday()] + " " + strconv.Itoa(day.Day()) + " de " + months[day.Month()]
 	}
 
-	// Convertir cellColors a JSON
+	// Convertir cellColors a JSON escapado
 	cellColorsJSON, err := json.Marshal(cellColors)
 	if err != nil {
 		c.HTML(http.StatusInternalServerError, "500.html", gin.H{"error": "Error al convertir colores a JSON"})
@@ -118,11 +120,11 @@ func ShowWeekPage(c *gin.Context) {
 		"Intervals":          Intervals,
 		"Workers":            workers,
 		"EntriesByDayWorker": entriesByDayAndWorker,
-		"CellColors":         string(cellColorsJSON), // Inyectar como cadena JSON
+		"CellColors":         template.JS(cellColorsJSON), // Inyectar como cadena JSON escapada
 	})
 }
 
-// ------------------------
+// ----------------------------------------------------------------------------------------------------------
 func SaveSchedule(c *gin.Context) {
 	weekID := c.Param("weekID")
 
