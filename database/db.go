@@ -1,6 +1,8 @@
 package database
 
 import (
+	"fmt"
+	"horariosapp/config"
 	"horariosapp/models"
 	"log"
 	"strconv"
@@ -16,7 +18,7 @@ var DB *gorm.DB
 func ConnectDB() {
 
 	// Creamos la conexion a la base de datos de postgres
-	dsn := "host=localhost user=postgres password=gagll1i1 dbname=horarios port=5432"
+	dsn := fmt.Sprintf("host=%s user=%s password=%s port=%s sslmode=disable", config.DBHost, config.DBUser, config.DBPassword, config.DBPort)
 	var err error
 	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {

@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-
+	//Cargamos las variables de entorno
 	config.Init()
 	// Iniciamos la base de datos
 	database.ConnectDB()
