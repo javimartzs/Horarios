@@ -1,59 +1,72 @@
 package controllers
 
 import (
+	"horariosapp/config"
 	"horariosapp/database"
 	"horariosapp/models"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt"
 	"golang.org/x/crypto/bcrypt"
 )
 
-// Controller para renderizar la pagina de Inicio de session
+// Controlador para renderizar la página de inicio de sesión
 func ShowLoginPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "login.html", nil)
 }
 
-// Controler con la logica de autenticacion
+// Controlador con la lógica de autenticación
 func Login(c *gin.Context) {
 
+	// Extraemos el usuario y la contraseña del formulario
 	var user models.User
-	// Extraemos los inputs del formulario de login
 	username := c.PostForm("username")
 	password := c.PostForm("password")
 
-	// Verificamos si la base de datos existe
-	if database.DB == nil {
-		c.HTML(http.StatusInternalServerError, "login.html", gin.H{"error": "Database not found"})
-		return
-	}
-
-	// Verificamos si el usuario existe en la base de datos
 	if err := database.DB.Where("username = ?", username).First(&user).Error; err != nil {
 		c.HTML(http.StatusUnauthorized, "login.html", gin.H{"error": "Invalid username or password"})
 		return
 	}
-
-	// Verificamos si la contraseña es del usuario registrado
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
 		c.HTML(http.StatusUnauthorized, "login.html", gin.H{"error": "Invalid username or password"})
 		return
 	}
 
-	// Creamos la cookie de session del rol del usuario y otra con su nombre
-	c.SetCookie("session", user.Role, 3600, "/", "", false, true)
-	c.SetCookie("name", user.Name, 3600, "/", "", false, true)
+	// Configuramos los claims del Token JWT
+	claims := jwt.MapClaims{
+		"name":     user.Name,
+		"username": user.Username,
+		"role":     user.Role,
+		"exp":      time.Now().Add(time.Hour * 1).Unix(), // El token expira en 1 hora
+	}
 
-	// Segun el rol del usuario lo redirigimos a una ruta determinada
-	if user.Role == "admin" {
+	// Creamos el token y lo firmamos con la secret key
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := token.SignedString([]byte(config.JWTSecret))
+	if err != nil {
+		c.HTML(http.StatusInternalServerError, "login.html", gin.H{"error": "Error creating token"})
+		return
+	}
+	c.SetCookie("token", tokenString, 3600, "/", "", false, true)
+
+	// Redireccionamos según el rol
+	switch user.Role {
+	case "admin":
 		c.Redirect(http.StatusFound, "/admin")
-	} else {
+	case "worker":
+		c.Redirect(http.StatusFound, "/worker/"+user.Username)
+	case "store":
+		c.Redirect(http.StatusFound, "/store/"+user.Username)
+	default:
 		c.Redirect(http.StatusFound, "/login")
 	}
+
 }
 
-// Controller con la logica de logout (eliminando las cookies)
+// Controlador con la lógica de logout (eliminando la cookie del token)
 func Logout(c *gin.Context) {
-	c.SetCookie("session", "", -1, "/", "", false, true)
+	c.SetCookie("token", "", -1, "/", "", true, true) // Elimina la cookie
 	c.Redirect(http.StatusFound, "/login")
 }

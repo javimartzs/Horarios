@@ -1,6 +1,7 @@
 package main
 
 import (
+	"horariosapp/config"
 	"horariosapp/controllers"
 	"horariosapp/database"
 	"log"
@@ -9,6 +10,8 @@ import (
 )
 
 func main() {
+
+	config.Init()
 	// Iniciamos la base de datos
 	database.ConnectDB()
 

@@ -1,19 +1,38 @@
 package controllers
 
 import (
+	"horariosapp/config"
 	"horariosapp/database"
 	"horariosapp/models"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt"
 	"golang.org/x/crypto/bcrypt"
 )
 
 func ShowWorkersPage(c *gin.Context) {
-	// Comprobamos el rol que tiene
-	role, err := c.Cookie("session")
-	if err != nil || role != "admin" {
+	// Extraemos el token de la cookie
+	tokenString, err := c.Cookie("token")
+	if err != nil {
+		c.Redirect(http.StatusFound, "/login")
+		return
+	}
+
+	// Verificamos el token
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		return []byte(config.JWTSecret), nil
+	})
+
+	if err != nil || !token.Valid {
+		c.Redirect(http.StatusFound, "/login")
+		return
+	}
+
+	// Extraemos los claims del token
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok || claims["role"] != "admin" {
 		c.Redirect(http.StatusFound, "/login")
 		return
 	}

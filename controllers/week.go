@@ -3,6 +3,7 @@ package controllers
 import (
 	"encoding/json"
 	"fmt"
+	"horariosapp/config"
 	"horariosapp/database"
 	"horariosapp/models"
 	"html/template"
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt"
 )
 
 // Intervalos horarios de las tablas diarias
@@ -50,9 +52,26 @@ var months = map[time.Month]string{
 
 // ShowWeekPage maneja la visualización de la página de una semana específica
 func ShowWeekPage(c *gin.Context) {
-	// Verifica el rol del usuario a partir de la cookie de sesión
-	role, err := c.Cookie("session")
-	if err != nil || role != "admin" {
+	// Extraemos el token de la cookie
+	tokenString, err := c.Cookie("token")
+	if err != nil {
+		c.Redirect(http.StatusFound, "/login")
+		return
+	}
+
+	// Verificamos el token
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		return []byte(config.JWTSecret), nil
+	})
+
+	if err != nil || !token.Valid {
+		c.Redirect(http.StatusFound, "/login")
+		return
+	}
+
+	// Extraemos los claims del token
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok || claims["role"] != "admin" {
 		c.Redirect(http.StatusFound, "/login")
 		return
 	}

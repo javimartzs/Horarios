@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"horariosapp/config"
 	"horariosapp/database"
 	"horariosapp/models"
 	"net/http"
@@ -8,13 +9,31 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt"
 )
 
 // Controller para cargar la pagina que muestra el listado de semanas
 func ShowWeeksPage(c *gin.Context) {
-	// Comprobamos que es administrador
-	role, err := c.Cookie("session")
-	if err != nil || role != "admin" {
+	// Extraemos el token de la cookie
+	tokenString, err := c.Cookie("token")
+	if err != nil {
+		c.Redirect(http.StatusFound, "/login")
+		return
+	}
+
+	// Verificamos el token
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		return []byte(config.JWTSecret), nil
+	})
+
+	if err != nil || !token.Valid {
+		c.Redirect(http.StatusFound, "/login")
+		return
+	}
+
+	// Extraemos los claims del token
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok || claims["role"] != "admin" {
 		c.Redirect(http.StatusFound, "/login")
 		return
 	}
