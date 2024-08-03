@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <title>Login</title>
+    <style>
+        .bg-amasarte {background-color: #0b4596;}
+        .login-container {margin-top: 150px;} /* Ajusta el valor según sea necesario */
+    </style>
+</head>
+<body>
+    <header class="header shadow mx-auto p-2 mb-4 bg-amasarte">
+        <h1 class="text-center fst-italic text-white">Gestor de trabajadores y horarios Amasarte</h1>
+    </header>
+    <main class="login-container mx-auto p-4">
+        <div class="row justify-content-center">
+            <div class="col-md-6 card shadow p-4 bg-light rounded">
+                <h2 class="text-center fst-italic mb-3">Inicio de sesión</h2>
+                <form action="/login" method="post">
+                    <!--Alerta por usuario invalido-->
+                    {{if .error}}
+                    <div class="alert alerg-dander">{{.error}}</div>
+                    {{end}}
+                    <!--Input del usuario-->
+                    <div class="form-group mb-3">
+                        <input type="text" class="form-control rounded" name="username" id="username" placeholder="Usuario" required>
+                    </div>
+                    <!--Input de la password-->
+                    <div class="form-group mb-3">
+                        <input type="password" class="form-control rounded" name="pasword" id="password" placeholder="Contraseña" required>
+                    </div>
+                    <!--Boton de envio de form-->
+                    <div>
+                        <button type="submit" class="btn btn-block text-white rounded bg-amasarte">Login</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
