@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista de Vacaciones</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        .sortable th {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <header class="d-flex container-xxl mx-5 my-5 justify-content-between align-items-center">
+        <h1 class="font-weight-bold mb-4">Vacaciones</h1>
+        <a href="/admin" class="btn btn-secondary text-white px-3">Volver</a>
+    </header>
+    <div class="container-xxl m-5">
+        <div class="d-flex justify-content-between mb-3">
+            <button class="btn btn-secondary mb-3" onclick="sortTableByDate()">Ordenar por Fecha de Inicio</button>
+            <button class="btn btn-primary mb-3" data-toggle="modal" data-target="#vacationModal">Añadir Vacaciones</button>
+        </div>
+
+        <table class="table table-striped sortable" id="vacationsTable">
+            <thead>
+                <tr>
+                    <th class="fixed-width text-center">Trabajador</th>
+                    <th class="fixed-width text-center">Fecha de Inicio</th>
+                    <th class="fixed-width text-center">Fecha de Fin</th>
+                    <th class="fixed-width text-center">Estado</th>
+                    <th class="fixed-width text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{range .Vacations}}
+                <tr>
+                    <td class="fixed-width text-center">{{.Worker.Name}} {{.Worker.Lastname}}</td>
+                    <td class="fixed-width text-center">{{.StartDate}}</td>
+                    <td class="fixed-width text-center">{{.EndDate}}</td>
+                    <td class="fixed-width text-center">{{.Status}}</td>
+                    <td class="fixed-width text-center">
+                        <button class="btn btn-sm btn-primary" data-toggle="modal" data-target="#editVacationModal-{{.ID}}">Editar</button>
+                        <form action="/admin/vacations/delete/{{.ID}}" method="POST" style="display:inline;">
+                            <button type="submit" class="btn btn-sm btn-danger">Eliminar</button>
+                        </form>
+                    </td>
+                </tr>
+
+                <!-- Modal para editar vacaciones -->
+                <div class="modal fade" id="editVacationModal-{{.ID}}" tabindex="-1" role="dialog" aria-labelledby="editVacationModalLabel-{{.ID}}" aria-hidden="true">
+                    <div class="modal-dialog modal-lg" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="editVacationModalLabel-{{.ID}}">Editar Vacaciones</h5>
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <form action="/admin/vacations/edit" method="POST">
+                                    <input type="hidden" name="id" value="{{.ID}}">
+                                    <div class="form-group">
+                                        <label for="worker_id">Trabajador</label>
+                                        <select class="form-control" name="worker_id" required>
+                                            {{range $.Workers}}
+                                            <option value="{{.ID}}" {{if eq .ID $.WorkerID}}selected{{end}}>{{.Name}} {{.Lastname}}</option>
+                                            {{end}}
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="start_date">Fecha de Inicio</label>
+                                        <input type="date" class="form-control" name="start_date" value="{{.StartDate}}" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="end_date">Fecha de Fin</label>
+                                        <input type="date" class="form-control" name="end_date" value="{{.EndDate}}" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="status">Estado</label>
+                                        <select name="status" class="form-control">
+                                            <option value="Pendientes" {{if eq .Status "Pendientes"}}selected{{end}}>Pendientes</option>
+                                            <option value="Disfrutadas" {{if eq .Status "Disfrutadas"}}selected{{end}}>Disfrutadas</option>
+                                        </select>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Guardar</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Modal para añadir vacaciones -->
+    <div class="modal fade" id="vacationModal" tabindex="-1" role="dialog" aria-labelledby="vacationModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="vacationModalLabel">Asignar Vacaciones</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form action="/admin/vacations/create" method="POST">
+                        <div class="form-group">
+                            <label for="worker_id">Trabajador</label>
+                            <select class="form-control" name="worker_id" required>
+                                {{range .Workers}}
+                                <option value="{{.ID}}">{{.Name}} {{.Lastname}}</option>
+                                {{end}}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="start_date">Fecha de Inicio</label>
+                            <input type="date" class="form-control" name="start_date" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="end_date">Fecha de Fin</label>
+                            <input type="date" class="form-control" name="end_date" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="status">Estado</label>
+                            <select name="status" class="form-control" required>
+                                <option value="Pendientes">Pendientes</option>
+                                <option value="Disfrutadas">Disfrutadas</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Guardar</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Función para ordenar la tabla por fecha de inicio
+        function sortTableByDate() {
+            var table = document.getElementById('vacationsTable');
+            var rows = Array.from(table.rows).slice(1); // Ignorar el encabezado
+            rows.sort(function(a, b) {
+                var dateA = new Date(a.cells[1].innerText);
+                var dateB = new Date(b.cells[1].innerText);
+                return dateA - dateB;
+            });
+            rows.forEach(function(row) {
+                table.tBodies[0].appendChild(row);
+            });
+        }
+    </script>
+</body>
+</html>

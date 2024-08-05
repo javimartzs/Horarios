@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard del Administrador</title>
+    <title>Panel de trabajadores</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="/css/styles.css">
@@ -28,8 +27,8 @@
                 </select>
                 <select class="form-control d-inline-block w-auto ml-3" id="filterStatusSelect" onchange="filterTableByStatus()">
                     <option value="">Filtrar por Estado</option>
-                    {{range .Statuses}}
-                    <option value="{{.}}">{{.}}</option>
+                    {{range .Workers}}
+                    <option value="{{.Status}}">{{.Status}}</option>
                     {{end}}
                 </select>
             </div>
@@ -110,7 +109,7 @@
                                     <div class="form-group">
                                         <label for="store">Tienda</label>
                                         <select class="form-control" name="store" required>
-                                            {{range .Stores}}
+                                            {{range $.Stores}}
                                             <option value="{{.Name}}" {{if eq $.Store .Name}}selected{{end}}>{{.Name}}</option>
                                             {{end}}
                                         </select>

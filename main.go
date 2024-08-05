@@ -47,6 +47,12 @@ func main() {
 		admin.GET("/calendar", controllers.WeeksPage)
 		admin.GET("/calendar/:weekID", controllers.ShowWeekPage)
 		admin.POST("/calendar/:weekID/save", controllers.SaveSchedule)
+
+		admin.GET("/vacations", controllers.VacationsPage)
+		admin.POST("/vacations/create", controllers.CreateVacation)
+		admin.POST("/vacations/update/:id", controllers.UpdateVacation)
+		admin.POST("/vacations/delete/:id", controllers.DeleteVacation)
+
 	}
 
 	r.Run(":8080")

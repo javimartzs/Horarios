@@ -32,7 +32,9 @@ func ConnectDB() {
 		&models.Worker{},
 		&models.Week{},
 		&models.ScheduleEntry{},
-		&models.WorkerHours{})
+		&models.WorkerHours{},
+		&models.Vacation{},
+	)
 	if err != nil {
 		log.Fatal("Failed to migrate database", err)
 	}
