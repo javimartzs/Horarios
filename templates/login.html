@@ -21,7 +21,7 @@
                 <form action="/login" method="post">
                     <!--Alerta por usuario invalido-->
                     {{if .error}}
-                    <div class="alert alerg-dander">{{.error}}</div>
+                    <div class="alert alert-danger">{{.error}}</div>
                     {{end}}
                     <!--Input del usuario-->
                     <div class="form-group mb-3">
@@ -29,7 +29,7 @@
                     </div>
                     <!--Input de la password-->
                     <div class="form-group mb-3">
-                        <input type="password" class="form-control rounded" name="pasword" id="password" placeholder="Contraseña" required>
+                        <input type="password" class="form-control rounded" name="password" id="password" placeholder="Contraseña" required>
                     </div>
                     <!--Boton de envio de form-->
                     <div>

@@ -1,9 +1,12 @@
 package config
 
 import (
+	"fmt"
 	"log"
 	"os"
 
+	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt"
 	"github.com/joho/godotenv"
 )
 
@@ -47,4 +50,27 @@ func Init() {
 	PassUser = os.Getenv("ADMIN_PASS")
 	RoleUser = os.Getenv("ADMIN_ROLE")
 	NameUser = os.Getenv("ADMIN_NAME")
+}
+
+func ValidateToken(c *gin.Context) (jwt.MapClaims, error) {
+	// Extraremos el token de la cookie
+	tokenString, err := c.Cookie("token")
+	if err != nil {
+		return nil, err
+	}
+	// Comprobamos que ha sido firmado con la jwtsecret
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		return []byte(JWTSecret), nil
+	})
+	if err != nil || !token.Valid {
+		return nil, err
+	}
+
+	// Parseamos los parametros del token
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, fmt.Errorf("invalid claims")
+	}
+
+	return claims, nil
 }

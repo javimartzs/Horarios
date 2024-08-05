@@ -18,20 +18,22 @@ func ShowLoginPage(c *gin.Context) {
 }
 
 // Controlador con la logica de autenticacion de los diferentes usuarios
-func Login(c *gin.Context) {
 
+// Controlador con la lógica de autenticación de los diferentes usuarios
+func Login(c *gin.Context) {
 	var user models.User
 	username := c.PostForm("username")
 	password := c.PostForm("password")
 
-	// Verificamos si el usuario esta en la base de datos
+	// Verificamos si el usuario está en la base de datos
 	if err := database.DB.Where("username = ?", username).First(&user).Error; err != nil {
 		c.HTML(http.StatusUnauthorized, "login.html", gin.H{"error": "Invalid username or password"})
 		return
 	}
+
 	// Verificamos que esa contraseña es de ese usuario
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
-		c.HTML(http.StatusUnauthorized, "login.html", gin.H{"error": "Invalid username or password"})
+		c.HTML(http.StatusUnauthorized, "login.html", gin.H{"error": "Invalid password or password"})
 		return
 	}
 
@@ -44,7 +46,7 @@ func Login(c *gin.Context) {
 	}
 
 	// Creamos el token y lo firmamos con la key
-	token := jwt.NewWithClaims(jwt.SigningMethodES256, claims)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenStr, err := token.SignedString([]byte(config.JWTSecret))
 	if err != nil {
 		c.HTML(http.StatusInternalServerError, "login.html", gin.H{"error": "Error creating auth token"})
@@ -54,7 +56,7 @@ func Login(c *gin.Context) {
 	// Creamos la cookie asociada al token jwt
 	c.SetCookie("token", tokenStr, 3600, "/", "", false, true)
 
-	// Redireccionamos a la pagina segun el rol de la cookie
+	// Redireccionamos a la página según el rol de la cookie
 	switch user.Role {
 	case "admin":
 		c.Redirect(http.StatusFound, "/admin")
@@ -65,4 +67,9 @@ func Login(c *gin.Context) {
 	default:
 		c.Redirect(http.StatusFound, "/login")
 	}
+}
+
+func Logout(c *gin.Context) {
+	c.SetCookie("token", "", -1, "/", "", true, true)
+	c.Redirect(http.StatusFound, "/login")
 }

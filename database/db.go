@@ -28,6 +28,7 @@ func ConnectDB() {
 	// Migramos las structs de los models como tablas de la base de datos
 	err = DB.AutoMigrate(
 		&models.User{},
+		&models.Store{},
 		&models.Worker{},
 		&models.Week{},
 		&models.ScheduleEntry{},

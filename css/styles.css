@@ -1,0 +1,62 @@
+.bg-amasarte {
+    background-color: #0b4596;
+}
+
+.custom-container {
+    max-width: 1300px;
+}
+.card-custom {
+    background-color: #87a2d6; /* Color de fondo personalizado */
+    color: white;
+    min-height: 250px; /* Altura mínima personalizada */
+    transition: background-color 0.3s, box-shadow 0.3s; /* Transición suave */
+}
+.card-custom-week {
+    background-color: #87a2d6; /* Color de fondo personalizado */
+    color: white;
+    transition: background-color 0.3s, box-shadow 0.3s; /* Transición suave */
+}
+.card-custom:hover {
+    background-color: #5a9; /* Color de fondo al hacer hover */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Añade una sombra al hacer hover */
+    color: white;
+}
+.card-custom-week:hover {
+    background-color: #5a9; /* Color de fondo al hacer hover */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Añade una sombra al hacer hover */
+    color: white;
+}
+.card-custom-main {
+    background-color: #87a2d6; /* Color de fondo personalizado */
+    color: white;
+}
+a {
+    text-decoration: none; /* Elimina subrayado de los enlaces */
+}
+
+.fixed-width {
+    width: 10%; /* 100% / 8 columnas = 12.5% */
+}
+
+.table-sm td, .table-sm th {
+    padding: 0.3rem;
+}
+table {
+    font-size: 0.9rem;
+}
+.cell, .editable-cell {
+    background-color: white; /* Color inicial de las celdas */
+}
+.selected { background-color: rgb(190, 190, 190) !important; }
+.btn-red { background-color: #ffcccc; color: black; } /* Pastel red */
+.btn-green { background-color: #ccffcc; color: black; } /* Pastel green */
+.btn-blue { background-color: #ccccff; color: black; } /* Pastel blue */
+.btn-orange { background-color: #ffd9b3; color: black; } /* Pastel orange */
+.btn-pink { background-color: #ffdfbf; color: black; } /* Pastel pink */
+.btn-yellow { background-color: #ffffcc; color: black; } /* Pastel yellow */
+.btn-purple { background-color: rgb(230, 204, 255); color: black; } /* Pastel purple */
+.btn-light { background-color: #f8f9fa; color: black; } /* Light color for 'Nada' button */
+.btn-primary { margin-left: 0.5rem; }
+.center-table { margin: 0 auto; width: 50%; }
+.highlight-red { background-color: #ffcccc !important; } /* Rojo pastel */
+.highlight-green { background-color: #ccffcc !important; } /* Verde pastel */
