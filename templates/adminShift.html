@@ -53,7 +53,6 @@
                 {{end}}
             </select>
             <button id="export-button" class="btn btn-primary">Exportar a PDF</button>
-
         </div>
         <div class="table-container">
             {{range $dayIndex, $day := .Days}}
@@ -122,7 +121,7 @@
             $('#filter-select').select2({
                 placeholder: "Filtrar por Tienda"
             });
-
+    
             const cellColors = JSON.parse(`{{ .CellColors }}`);
             Object.keys(cellColors).forEach(key => {
                 const [workerID, interval, dayIndex] = key.split('-');
@@ -136,7 +135,7 @@
                     }
                 }
             });
-
+    
             const workerTotals = JSON.parse(`{{ .WorkerTotals }}`);
             Object.keys(workerTotals).forEach(workerID => {
                 Object.keys(workerTotals[workerID]).forEach(dayIndex => {
@@ -147,35 +146,35 @@
                     }
                 });
             });
-
+    
             updateAllTotals();
             highlightSummaryHours();
-
+    
             const cells = document.querySelectorAll('td.editable-cell');
             cells.forEach(cell => {
                 cell.addEventListener('mousedown', startSelecting);
                 cell.addEventListener('mouseover', selectCell);
             });
-
+    
             document.addEventListener('mouseup', stopSelecting);
             document.querySelector('#save-button').addEventListener('click', saveColors);
             
             // Ordenar los trabajadores por tienda al cargar la página
             sortWorkers();
         });
-
+    
         let selectedCells = [];
         let isSelecting = false;
-
+    
         function startSelecting(event) {
             isSelecting = true;
             selectCell(event);
         }
-
+    
         function stopSelecting() {
             isSelecting = false;
         }
-
+    
         function selectCell(event) {
             if (isSelecting) {
                 const cell = event.target;
@@ -193,7 +192,7 @@
                 }
             }
         }
-
+    
         function changeColor(color, className) {
             selectedCells.forEach(cell => {
                 cell.style.backgroundColor = color;
@@ -202,12 +201,13 @@
                     cell.classList.add(className);
                 }
             });
-
+    
             updateAllTotals();
             selectedCells = [];
             saveColors(); // Guardar cambios automáticamente después de cambiar el color
+            filterWorkers(); // Reaplicar el filtro de tienda después de cambiar el color
         }
-
+    
         function updateTotal(row) {
             const cells = row.querySelectorAll('td.editable-cell');
             let total = 0;
@@ -222,12 +222,13 @@
             const totalCell = row.querySelector('td.total-cell');
             totalCell.textContent = total;
         }
-
+    
         function updateAllTotals() {
             const rows = document.querySelectorAll('table tbody tr.worker-row');
             rows.forEach(row => updateTotal(row));
+            updateSummaryTable(); // Actualiza la tabla resumen después de actualizar todos los totales
         }
-
+    
         function highlightSummaryHours() {
             document.querySelectorAll('td.summary-hours').forEach(cell => {
                 const hours = parseFloat(cell.textContent) || 0;
@@ -240,11 +241,11 @@
                 }
             });
         }
-
+    
         function saveColors() {
             const colors = {};
             const totals = {};
-
+    
             document.querySelectorAll('td.editable-cell').forEach(cell => {
                 const workerID = cell.getAttribute('data-worker-id');
                 const interval = cell.getAttribute('data-interval');
@@ -252,7 +253,7 @@
                 const color = cell.style.backgroundColor;
                 colors[`${workerID}-${interval}-${dayIndex}`] = color;
             });
-
+    
             document.querySelectorAll('td.total-cell').forEach(cell => {
                 const workerID = cell.getAttribute('data-worker-id');
                 const dayIndex = cell.getAttribute('data-day-index');
@@ -262,7 +263,7 @@
                 }
                 totals[workerID][dayIndex] = total;
             });
-
+    
             fetch(`/admin/calendar/{{ .Week.WeekID }}/save`, {
                 method: 'POST',
                 headers: {
@@ -272,14 +273,13 @@
             }).then(response => response.json())
             .then(data => {
                 if (data.status === 'success') {
-                    window.location.reload(); // Recargar la página
-                    highlightSummaryHours();
+                    highlightSummaryHours(); // Actualiza la tabla de resumen sin recargar la página
                 } else {
                     alert('Error al guardar los cambios');
                 }
             });
         }
-
+    
         function getClassNameFromColor(color) {
             switch (color) {
                 case 'rgb(255, 204, 204)': return 'btn-red';
@@ -293,7 +293,7 @@
                 default: return null;
             }
         }
-
+    
         function sortWorkers() {
             const tableBodies = document.querySelectorAll('table tbody');
             tableBodies.forEach(tbody => {
@@ -301,20 +301,20 @@
                 rows.sort((a, b) => {
                     const nameA = a.getAttribute('data-worker-name').toLowerCase();
                     const nameB = b.getAttribute('data-worker-name').toLowerCase();
-
+    
                     if (nameA < nameB) return -1;
                     if (nameA > nameB) return 1;
                     return 0;
                 });
                 rows.forEach(row => tbody.appendChild(row));
             });
-
+    
             // Ordenar también la tabla resumen semanal
             const summaryRows = Array.from(document.querySelectorAll('tbody#summary-rows tr'));
             summaryRows.sort((a, b) => {
                 const nameA = a.getAttribute('data-worker-name').toLowerCase();
                 const nameB = b.getAttribute('data-worker-name').toLowerCase();
-
+    
                 if (nameA < nameB) return -1;
                 if (nameA > nameB) return 1;
                 return 0;
@@ -322,7 +322,7 @@
             const summaryTbody = document.querySelector('tbody#summary-rows');
             summaryRows.forEach(row => summaryTbody.appendChild(row));
         }
-
+    
         function filterWorkers() {
             const selectedOptions = $('#filter-select').val();
             const rows = document.querySelectorAll('tr.worker-row');
@@ -335,45 +335,61 @@
                 }
             });
         }
+    
+        function updateSummaryTable() {
+            const summaryRows = document.querySelectorAll('tbody#summary-rows tr');
+            summaryRows.forEach(row => {
+                const workerName = row.getAttribute('data-worker-name');
+                const workerRows = document.querySelectorAll(`tr.worker-row[data-worker-name="${workerName}"]`);
+                let totalHours = 0;
+                workerRows.forEach(workerRow => {
+                    const totalCell = workerRow.querySelector('td.total-cell');
+                    totalHours += parseFloat(totalCell.textContent) || 0;
+                });
+                row.querySelector('td.summary-hours').textContent = totalHours;
+            });
+    
+            highlightSummaryHours();
+        }
+    
         document.getElementById('export-button').addEventListener('click', () => {
-        const element = document.querySelector('.table-container'); // Selecciona la parte de la página que contiene las tablas
-
-        // Guarda el estado original del elemento
-        const originalStyle = {
-            width: element.style.width,
-            transform: element.style.transform
-        };
-
-        // Ajusta el estilo del elemento para reducir su tamaño
-        element.style.transform = 'scale(0.65)'; // Reduce el tamaño al 75%
-        element.style.transformOrigin = 'top left'; // Asegura que el elemento se escale desde la esquina superior izquierda
-        element.style.width = '150.33%'; // Ajusta el ancho para que encaje correctamente en el PDF
-
-        // Configura las opciones para la exportación
-        const opt = {
-            margin: [0.2, 0.2], // Márgenes en pulgadas
-            filename: 'horarios_semana.pdf',
-            image: { type: 'jpeg', quality: 0.99 },
-            html2canvas: {
-                scale: 2, // Mantén la escala para la captura
-                useCORS: true // Permite el uso de imágenes externas
-            },
-            jsPDF: {
-                unit: 'in',
-                format: 'a4',
-                orientation: 'landscape'
-            }
-        };
-
-        html2pdf().from(element).set(opt).toPdf().get('pdf').then(pdf => {
-            // Restaurar el estilo original del elemento
-            element.style.width = originalStyle.width;
-            element.style.transform = originalStyle.transform;
-
-            // Guardar el PDF
-            pdf.save(opt.filename);
+            const element = document.querySelector('.table-container'); // Selecciona la parte de la página que contiene las tablas
+    
+            // Guarda el estado original del elemento
+            const originalStyle = {
+                width: element.style.width,
+                transform: element.style.transform
+            };
+    
+            // Ajusta el estilo del elemento para reducir su tamaño
+            element.style.transform = 'scale(0.65)'; // Reduce el tamaño al 75%
+            element.style.transformOrigin = 'top left'; // Asegura que el elemento se escale desde la esquina superior izquierda
+            element.style.width = '150.33%'; // Ajusta el ancho para que encaje correctamente en el PDF
+    
+            // Configura las opciones para la exportación
+            const opt = {
+                margin: [0.2, 0.2], // Márgenes en pulgadas
+                filename: 'horarios_semana.pdf',
+                image: { type: 'jpeg', quality: 0.99 },
+                html2canvas: {
+                    scale: 2, // Mantén la escala para la captura
+                    useCORS: true // Permite el uso de imágenes externas
+                },
+                jsPDF: {
+                    unit: 'in',
+                    format: 'a4',
+                    orientation: 'landscape'
+                }
+            };
+    
+            html2pdf().from(element).set(opt).toPdf().get('pdf').then(pdf => {
+                // Restaurar el estilo original del elemento
+                element.style.width = originalStyle.width;
+                element.style.transform = originalStyle.transform;
+    
+                // Guardar el PDF
+                pdf.save(opt.filename);
+            });
         });
-    });
-    </script>
-</body>
+    </script></body>
 </html>
