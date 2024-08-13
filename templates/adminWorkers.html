@@ -27,9 +27,9 @@
                 </select>
                 <select class="form-control d-inline-block w-auto ml-3" id="filterStatusSelect" onchange="filterTableByStatus()">
                     <option value="">Filtrar por Estado</option>
-                    {{range .Workers}}
-                    <option value="{{.Status}}">{{.Status}}</option>
-                    {{end}}
+                    <option value="Alta">Alta</option>
+                    <option value="Baja">Baja</option>
+
                 </select>
             </div>
             <div>
