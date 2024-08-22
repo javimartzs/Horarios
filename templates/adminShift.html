@@ -325,15 +325,33 @@
         function filterWorkers() {
             const selectedOptions = $('#filter-select').val();
             const rows = document.querySelectorAll('tr.worker-row');
+            const summaryRows = document.querySelectorAll('tbody#summary-rows tr');
+
+            // Crear un conjunto para almacenar los nombres de los trabajadores que coinciden con el filtro
+            const visibleWorkerNames = new Set();
+
+            // Filtrar las filas de la tabla principal
             rows.forEach(row => {
                 const store = row.getAttribute('data-store');
+                const workerName = row.getAttribute('data-worker-name');
                 if (selectedOptions.length === 0 || selectedOptions.includes(store)) {
                     row.style.display = '';
+                    visibleWorkerNames.add(workerName); // Añadir el nombre del trabajador visible
                 } else {
                     row.style.display = 'none';
                 }
             });
+
+    // Filtrar las filas de la tabla resumen
+    summaryRows.forEach(row => {
+        const workerName = row.getAttribute('data-worker-name');
+        if (visibleWorkerNames.has(workerName)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
         }
+    });
+}
     
         function updateSummaryTable() {
             const summaryRows = document.querySelectorAll('tbody#summary-rows tr');
