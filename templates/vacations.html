@@ -58,7 +58,7 @@
                                 </button>
                             </div>
                             <div class="modal-body">
-                                <form action="/admin/vacations/edit" method="POST">
+                                <form action="/admin/vacations/update/{{.ID}}" method="POST">
                                     <input type="hidden" name="id" value="{{.ID}}">
                                     <div class="form-group">
                                         <label for="worker_id">Trabajador</label>
